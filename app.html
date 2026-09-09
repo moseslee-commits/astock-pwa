@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>A股智能选股系统</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f1419;
+    --bg-sec: #1a1f2e;
+    --bg-ter: #252b3d;
+    --border: #2d3548;
+    --text: #e8eaed;
+    --text-sec: #9aa0a6;
+    --accent: #1677ff;
+    --up: #ff4d4f;
+    --down: #00b578;
+    --warn: #faad14;
+    --sidebar-w: 180px;
+    --titlebar-h: 44px;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+
+  /* 响应式布局 */
+  @media (max-width: 900px) {
+    :root { --sidebar-w: 60px; }
+    .nav-item {
+      justify-content: center;
+      padding: 12px 0;
+      font-size: 0;
+      gap: 0;
+      height: 48px;
+      min-height: 48px;
+      line-height: 1;
+    }
+    .nav-item .nav-icon { font-size: 18px; line-height: 1; }
+    .nav-item .nav-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      margin-left: 0;
+      font-size: 9px;
+      padding: 0 4px;
+    }
+    .nav-item { position: relative; }
+    .sidebar-section-title { display: none; }
+    .sidebar-section { padding: 4px 0; }
+    .sidebar-footer { padding: 8px 4px; text-align: center; font-size: 0; }
+    .sidebar-footer .status-item { justify-content: center; }
+    .sidebar-footer .status-item span:last-child { display: none; }
+    .sidebar-footer .status-dot { margin-right: 0; }
+    .settings-page, .about-page { padding: 20px; }
+    .about-info { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .sidebar { display: none !important; width: 0 !important; }
+    .about-info { grid-template-columns: 1fr; }
+    .settings-section { padding: 16px; max-width: 100%; }
+    .settings-page { padding: 16px; }
+  }
+
+  /* 启动加载画面 */
+  #splashScreen {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    transition: opacity 0.5s;
+  }
+  #splashScreen.hidden { opacity: 0; pointer-events: none; }
+  .splash-logo {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, var(--up), var(--accent));
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 700; color: #fff;
+    margin-bottom: 20px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  .splash-text { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .splash-sub { font-size: 13px; color: var(--text-sec); }
+  .splash-loader {
+    width: 40px; height: 40px;
+    border: 3px solid var(--bg-ter);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-top: 20px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 标题栏 */
+  .titlebar {
+    height: var(--titlebar-h);
+    -webkit-app-region: drag;
+    user-select: none;
+    background: var(--bg-sec);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    flex-shrink: 0;
+  }
+  .titlebar-left { display: flex; align-items: center; gap: 10px; -webkit-app-region: no-drag; }
+  .app-logo {
+    width: 24px; height: 24px;
+    background: linear-gradient(135deg, var(--up), var(--accent));
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff;
+  }
+  .app-title { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+  .app-version { font-size: 11px; color: var(--text-sec); margin-left: 8px; }
+  .titlebar-right { display: flex; gap: 4px; -webkit-app-region: no-drag; }
+  .titlebar-btn {
+    width: 32px; height: 28px;
+    border: none; background: transparent;
+    color: var(--text-sec); cursor: pointer;
+    border-radius: 4px; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .titlebar-btn:hover { background: var(--bg-ter); color: var(--text); }
+  .titlebar-btn.close:hover { background: var(--up); color: #fff; }
+
+  /* 主体 */
+  .main-container { display: flex; flex: 1; overflow: hidden; }
+
+  /* 侧边栏 */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--bg-sec);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    flex-shrink: 0;
+  }
+  .sidebar-section { padding: 8px 0; }
+  .sidebar-section-title {
+    font-size: 11px; color: var(--text-sec);
+    padding: 0 16px 8px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; cursor: pointer;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+    font-size: 13px; color: var(--text-sec);
+  }
+  .nav-item:hover { background: var(--bg-ter); color: var(--text); }
+  .nav-item.active {
+    background: rgba(22, 119, 255, 0.1);
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+  .nav-icon { width: 20px; text-align: center; font-size: 15px; flex-shrink: 0; }
+  .nav-badge {
+    margin-left: auto;
+    background: var(--up); color: #fff;
+    font-size: 10px; padding: 1px 6px;
+    border-radius: 8px; font-weight: 600;
+  }
+
+  /* 底部状态栏 */
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-sec);
+  }
+  .status-item {
+    display: flex; justify-content: space-between;
+    margin-bottom: 4px; align-items: center;
+  }
+  .status-dot {
+    display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; margin-right: 4px;
+    background: var(--down);
+    animation: blink 2s infinite;
+  }
+  .status-dot.error { background: var(--up); }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  /* 内容区 */
+  .content-area { flex: 1; overflow: hidden; position: relative; }
+  .page {
+    display: none; width: 100%; height: 100%;
+    position: relative;
+  }
+  .page.active { display: block; }
+  .content-frame {
+    width: 100%; height: 100%; border: none; display: block;
+  }
+  .frame-loading {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 10;
+  }
+  .frame-loading.hidden { display: none; }
+  .frame-error {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 10; color: var(--text-sec);
+  }
+  .frame-error.hidden { display: none; }
+  .frame-error-icon { font-size: 48px; margin-bottom: 16px; }
+  .frame-error-text { font-size: 14px; margin-bottom: 12px; }
+  .frame-error-btn {
+    padding: 8px 20px; background: var(--accent);
+    border: none; color: #fff; border-radius: 6px;
+    cursor: pointer; font-size: 13px;
+  }
+
+  /* 设置页面 */
+  .settings-page {
+    padding: 24px; overflow-y: auto;
+    height: 100%;
+  }
+  .settings-section {
+    background: var(--bg-sec);
+    border-radius: 10px; padding: 20px;
+    margin-bottom: 16px; max-width: 600px;
+  }
+  .settings-title {
+    font-size: 16px; font-weight: 600;
+    margin-bottom: 16px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .setting-row {
+    display: flex; justify-content: space-between;
+    align-items: center; padding: 12px 0;
+    border-bottom: 1px solid rgba(45, 53, 72, 0.5);
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { font-size: 13px; }
+  .setting-desc { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+  .toggle-switch {
+    width: 44px; height: 24px;
+    background: var(--bg-ter); border-radius: 12px;
+    position: relative; cursor: pointer;
+    transition: background 0.3s; flex-shrink: 0;
+  }
+  .toggle-switch.on { background: var(--accent); }
+  .toggle-switch::after {
+    content: ''; position: absolute;
+    width: 20px; height: 20px; background: #fff;
+    border-radius: 50%; top: 2px; left: 2px;
+    transition: left 0.3s;
+  }
+  .toggle-switch.on::after { left: 22px; }
+
+  /* 关于页面 */
+  .about-page {
+    padding: 40px 20px; overflow-y: auto;
+    height: 100%; display: flex;
+    flex-direction: column; align-items: center;
+  }
+  .about-logo {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, var(--up), var(--accent));
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 700; color: #fff;
+    margin-bottom: 20px;
+  }
+  .about-name { font-size: 22px; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .about-desc { color: var(--text-sec); font-size: 14px; margin-bottom: 24px; }
+  .about-info {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 12px; max-width: 400px; width: 100%;
+  }
+  .about-info-item {
+    background: var(--bg-sec); padding: 12px; border-radius: 8px;
+  }
+  .about-info-label { font-size: 11px; color: var(--text-sec); }
+  .about-info-value { font-size: 15px; font-weight: 600; margin-top: 5px; }
+
+  /* Toast提示 */
+  #toastContainer {
+    position: fixed; top: 60px; right: 20px;
+    z-index: 9999; display: flex;
+    flex-direction: column; gap: 8px;
+  }
+  .toast {
+    background: var(--bg-sec); border: 1px solid var(--border);
+    padding: 10px 16px; border-radius: 8px;
+    font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .toast.success { border-left: 3px solid var(--down); }
+  .toast.error { border-left: 3px solid var(--up); }
+  .toast.info { border-left: 3px solid var(--accent); }
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+</style>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0e1217">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="智能选股">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <link rel="icon" type="image/png" href="./icons/icon-192.png">
+</head>
+<body>
+
+<!-- 启动加载画面 -->
+<div id="splashScreen">
+  <div class="splash-logo">A股</div>
+  <div class="splash-text">A股智能选股系统</div>
+  <div class="splash-sub">正在加载，请稍候...</div>
+  <div class="splash-loader"></div>
+</div>
+
+<!-- Toast容器 -->
+<div id="toastContainer"></div>
+
+<!-- 标题栏 -->
+<div class="titlebar">
+  <div class="titlebar-left">
+    <div class="app-logo">A</div>
+    <span class="app-title">A股智能选股系统</span>
+    <span class="app-version">v2.0 Pro</span><span id="apiStatus" style="font-size:10px;color:#666;margin-left:8px">检测中...</span>
+  </div>
+  <div class="titlebar-right">
+    <button class="titlebar-btn" onclick="minimizeWindow()" title="最小化">─</button>
+    <button class="titlebar-btn" onclick="toggleFullscreen()" title="最大化">▢</button>
+    <button class="titlebar-btn close" onclick="closeWindow()" title="关闭">✕</button>
+  </div>
+</div>
+
+<!-- 主体 -->
+<div class="main-container">
+  <!-- 侧边栏 -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">主功能</div>
+      <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard', this)">
+        <span class="nav-icon">📊</span>实时看板
+      </div>
+      <div class="nav-item" data-page="screener" onclick="switchPage('screener', this)">
+        <span class="nav-icon">🔍</span>智能选股
+        <span class="nav-badge">81</span>
+      </div>
+      <div class="nav-item" data-page="backtest" onclick="switchPage('backtest', this)">
+        <span class="nav-icon">📈</span>策略回测
+      </div>
+      <div class="nav-item" data-page="portfolio" onclick="switchPage('portfolio', this)">
+        <span class="nav-icon">💼</span>持仓管理
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">工具</div>
+      <div class="nav-item" data-page="history" onclick="switchPage('history', this)">
+        <span class="nav-icon">📋</span>选股历史
+      </div>
+      <div class="nav-item" data-page="alert" onclick="switchPage('alert', this)">
+        <span class="nav-icon">🔔</span>价格预警
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">系统</div>
+      <div class="nav-item" data-page="settings" onclick="switchPage('settings', this)">
+        <span class="nav-icon">⚙️</span>设置
+      </div>
+      <div class="nav-item" data-page="about" onclick="switchPage('about', this)">
+        <span class="nav-icon">ℹ️</span>关于
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="status-item">
+        <span><span class="status-dot" id="serverDot"></span>服务器</span>
+        <span id="serverStatus">检测中...</span>
+      </div>
+      <div class="status-item">
+        <span>数据更新</span>
+        <span id="lastUpdate">--:--:--</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 内容区 -->
+  <div class="content-area">
+    <!-- 实时看板 -->
+    <div class="page active" id="page-dashboard">
+      <div class="frame-loading" id="loading-dashboard">
+        <div class="splash-loader"></div>
+        <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载看板...</div>
+      </div>
+      <div class="frame-error hidden" id="error-dashboard">
+        <div class="frame-error-icon">⚠️</div>
+        <div class="frame-error-text">页面加载失败</div>
+        <button class="frame-error-btn" onclick="reloadFrame('dashboard')">重新加载</button>
+      </div>
+      <iframe class="content-frame" id="frame-dashboard" src="A股实时看板.html" onload="onFrameLoad('dashboard')" onerror="onFrameError('dashboard')"></iframe>
+    </div>
+
+    <!-- 智能选股 -->
+    <div class="page" id="page-screener">
+      <div class="frame-loading" id="loading-screener">
+        <div class="splash-loader"></div>
+        <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载...</div>
+      </div>
+      <iframe class="content-frame" id="frame-screener" src="智能选股器.html" onload="onFrameLoad('screener')"></iframe>
+    </div>
+
+    <!-- 策略回测 -->
+    <div class="page" id="page-backtest">
+      <div class="frame-loading" id="loading-backtest">
+        <div class="splash-loader"></div>
+        <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载回测报告...</div>
+      </div>
+      <iframe class="content-frame" id="frame-backtest" src="策略回测报告_20260906.html" onload="onFrameLoad('backtest')"></iframe>
+    </div>
+
+    <!-- 持仓管理 -->
+    <div class="page" id="page-portfolio">
+      <div class="frame-loading" id="loading-portfolio">
+        <div class="splash-loader"></div>
+        <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载...</div>
+      </div>
+      <iframe class="content-frame" id="frame-portfolio" src="持仓管理.html" onload="onFrameLoad('portfolio')"></iframe>
+    </div>
+
+    <!-- 选股历史 -->
+    <div class="page" id="page-history">
+      <div class="frame-loading" id="loading-history">
+        <div class="splash-loader"></div>
+        <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载...</div>
+      </div>
+      <iframe class="content-frame" id="frame-history" src="选股历史回顾.html" onload="onFrameLoad('history')"></iframe>
+    </div>
+
+    <!-- 价格预警 -->
+    <div class="page" id="page-alert">
+      <div class="frame-loading" id="loading-alert">
+        <div class="splash-loader"></div>
+        <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载...</div>
+      </div>
+      <iframe class="content-frame" id="frame-alert" src="价格预警.html" onload="onFrameLoad('alert')"></iframe>
+    </div>
+
+    <!-- 设置 -->
+    <div class="page" id="page-settings">
+      <div class="settings-page">
+        <div class="settings-section">
+          <div class="settings-title">通用设置</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">自动刷新行情</div>
+              <div class="setting-desc">每30秒自动更新行情数据</div>
+            </div>
+            <div class="toggle-switch on" data-setting="autoRefresh" onclick="toggleSetting(this)"></div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">声音提醒</div>
+              <div class="setting-desc">出现买入信号时播放提示音</div>
+            </div>
+            <div class="toggle-switch on" data-setting="soundAlert" onclick="toggleSetting(this)"></div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">深色主题</div>
+              <div class="setting-desc">使用深色界面主题</div>
+            </div>
+            <div class="toggle-switch on" data-setting="darkTheme" onclick="toggleSetting(this)"></div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">启动时全屏</div>
+              <div class="setting-desc">应用启动时自动最大化窗口</div>
+            </div>
+            <div class="toggle-switch" data-setting="startFullscreen" onclick="toggleSetting(this)"></div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">选股策略</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">五维共振评分</div>
+              <div class="setting-desc">基本面25%+估值20%+资金20%+技术25%+风险10%</div>
+            </div>
+            <div class="toggle-switch on" data-setting="fiveDimScore" onclick="toggleSetting(this)"></div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">买入信号阈值</div>
+              <div class="setting-desc">综合评分≥此值触发买入信号</div>
+            </div>
+            <div style="color:var(--accent);font-weight:600">75分</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">显示选股理由</div>
+              <div class="setting-desc">在股票列表中显示评分依据标签</div>
+            </div>
+            <div class="toggle-switch on" data-setting="showReasons" onclick="toggleSetting(this)"></div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">数据管理</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">清除缓存数据</div>
+              <div class="setting-desc">清除本地存储的选股历史和自选股</div>
+            </div>
+            <button class="frame-error-btn" onclick="clearCache()" style="background:var(--up)">清除</button>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">恢复默认设置</div>
+              <div class="setting-desc">将所有设置恢复为默认值</div>
+            </div>
+            <button class="frame-error-btn" onclick="resetSettings()" style="background:var(--warn)">恢复</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 关于 -->
+    <div class="page" id="page-about">
+      <div class="about-page">
+        <div class="about-logo">A股</div>
+        <div class="about-name">A股智能选股系统</div>
+        <div class="about-desc">基于五维共振选股体系的专业选股工具</div>
+        <div class="about-info">
+          <div class="about-info-item">
+            <div class="about-info-label">版本</div>
+            <div class="about-info-value">v2.0 Pro</div>
+          </div>
+          <div class="about-info-item">
+            <div class="about-info-label">股票池</div>
+            <div class="about-info-value">81只 / 23板块</div>
+          </div>
+          <div class="about-info-item">
+            <div class="about-info-label">策略回测</div>
+            <div class="about-info-value">+18.35% / 365天</div>
+          </div>
+          <div class="about-info-item">
+            <div class="about-info-label">胜率</div>
+            <div class="about-info-value">50.0%</div>
+          </div>
+          <div class="about-info-item">
+            <div class="about-info-label">盈亏比</div>
+            <div class="about-info-value">1.54</div>
+          </div>
+          <div class="about-info-item">
+            <div class="about-info-label">最大回撤</div>
+            <div class="about-info-value">-4.53%</div>
+          </div>
+        </div>
+        <div style="margin-top:24px;font-size:11px;color:var(--text-sec);text-align:center">
+          本软件仅供学习研究使用，不构成投资建议<br>
+          股市有风险，投资需谨慎
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 全局状态 ==========
+let currentPage = 'dashboard';
+const pageFrames = {};
+const settings = loadSettings();
+
+// ========== 启动初始化 ==========
+window.addEventListener('load', function() {
+  // 隐藏启动画面
+  setTimeout(() => {
+    document.getElementById('splashScreen').classList.add('hidden');
+  }, 1500);
+
+  // 检测服务器状态
+  checkServerStatus();
+  setInterval(checkServerStatus, 10000);
+
+  // 更新时间
+  updateTime();
+  setInterval(updateTime, 1000);
+
+  // 应用设置
+  applySettings();
+});
+
+// ========== 页面切换 ==========
+function switchPage(pageId, navEl) {
+  if (currentPage === pageId) return;
+
+  // 切换页面
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + pageId).classList.add('active');
+
+  // 切换导航
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+
+  currentPage = pageId;
+
+  // 如果是iframe页面且未加载过，触发加载
+  const frame = document.getElementById('frame-' + pageId);
+  if (frame && !pageFrames[pageId]) {
+    pageFrames[pageId] = true;
+  }
+}
+
+// ========== iframe加载状态 ==========
+function onFrameLoad(pageId) {
+  const loading = document.getElementById('loading-' + pageId);
+  if (loading) loading.classList.add('hidden');
+}
+
+function onFrameError(pageId) {
+  const loading = document.getElementById('loading-' + pageId);
+  const error = document.getElementById('error-' + pageId);
+  if (loading) loading.classList.add('hidden');
+  if (error) error.classList.remove('hidden');
+}
+
+function reloadFrame(pageId) {
+  const frame = document.getElementById('frame-' + pageId);
+  const loading = document.getElementById('loading-' + pageId);
+  const error = document.getElementById('error-' + pageId);
+  if (loading) loading.classList.remove('hidden');
+  if (error) error.classList.add('hidden');
+  if (frame) frame.src = frame.src;
+}
+
+// ========== 服务器状态检测 ==========
+function checkServerStatus() {
+  fetch('/api/health')
+    .then(r => r.json())
+    .then(data => {
+      const dot = document.getElementById('serverDot');
+      const status = document.getElementById('serverStatus');
+      if (data.status === 'ok') {
+        dot.classList.remove('error');
+        status.textContent = '运行中';
+        status.style.color = 'var(--down)';
+      } else {
+        dot.classList.add('error');
+        status.textContent = '异常';
+        status.style.color = 'var(--up)';
+      }
+    })
+    .catch(() => {
+      const dot = document.getElementById('serverDot');
+      const status = document.getElementById('serverStatus');
+      dot.classList.add('error');
+      status.textContent = '离线';
+      status.style.color = 'var(--up)';
+    });
+}
+
+// ========== 时间更新 ==========
+function updateTime() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  document.getElementById('lastUpdate').textContent = h + ':' + m + ':' + s;
+}
+
+// ========== 设置管理 ==========
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem('astock_app_settings');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return {
+    autoRefresh: true,
+    soundAlert: true,
+    darkTheme: true,
+    startFullscreen: false,
+    fiveDimScore: true,
+    showReasons: true
+  };
+}
+
+function saveSettings() {
+  localStorage.setItem('astock_app_settings', JSON.stringify(settings));
+}
+
+function applySettings() {
+  document.querySelectorAll('.toggle-switch').forEach(toggle => {
+    const key = toggle.dataset.setting;
+    if (settings[key]) {
+      toggle.classList.add('on');
+    } else {
+      toggle.classList.remove('on');
+    }
+  });
+}
+
+function toggleSetting(el) {
+  const key = el.dataset.setting;
+  settings[key] = !settings[key];
+  el.classList.toggle('on');
+  saveSettings();
+  showToast(key + ' 已' + (settings[key] ? '开启' : '关闭'), 'success');
+}
+
+function clearCache() {
+  if (confirm('确定要清除所有缓存数据吗？这将删除选股历史和自选股。')) {
+    localStorage.removeItem('astock_selection_history');
+    localStorage.removeItem('astock_favorites');
+    showToast('缓存已清除', 'success');
+  }
+}
+
+function resetSettings() {
+  if (confirm('确定要恢复默认设置吗？')) {
+    localStorage.removeItem('astock_app_settings');
+    location.reload();
+  }
+}
+
+// ========== 窗口控制 ==========
+function minimizeWindow() {
+  if (window.pywebview && window.pywebview.api) {
+    window.pywebview.api.minimize();
+  }
+}
+
+function toggleFullscreen() {
+  if (window.pywebview && window.pywebview.api) {
+    window.pywebview.api.toggle_fullscreen();
+  } else {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+}
+
+function closeWindow() {
+  if (window.pywebview && window.pywebview.api) {
+    window.pywebview.api.close();
+  } else {
+    if (confirm('确定要关闭应用吗？')) {
+      window.close();
+    }
+  }
+}
+
+// ========== 窗口拖动（纯手动实现） ==========
+document.addEventListener('DOMContentLoaded', function() {
+  function checkApi() {
+    var el = document.getElementById('apiStatus');
+    if (el && window.pywebview && window.pywebview.api) {
+      el.textContent = 'API就绪';
+      el.style.color = '#00b578';
+      return true;
+    }
+    return false;
+  }
+  if (!checkApi()) {
+    var checks = 0;
+    var timer = setInterval(function() {
+      checks++;
+      if (checkApi() || checks > 20) clearInterval(timer);
+    }, 500);
+  }
+  window.addEventListener('pywebviewready', checkApi);
+
+  var isDragging = false;
+  var startX = 0, startY = 0;
+  var lastMoveTime = 0;
+
+  var titlebar = document.querySelector('.titlebar');
+  if (titlebar) {
+    titlebar.addEventListener('mousedown', function(e) {
+      if (e.target.closest('.titlebar-btn') || e.target.closest('.titlebar-right')) return;
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      e.preventDefault();
+    });
+    titlebar.addEventListener('dblclick', function(e) {
+      if (e.target.closest('.titlebar-btn') || e.target.closest('.titlebar-right')) return;
+      if (window.pywebview && window.pywebview.api && window.pywebview.api.toggle_maximize) {
+        window.pywebview.api.toggle_maximize();
+      }
+    });
+  }
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    var dx = e.clientX - startX;
+    var dy = e.clientY - startY;
+    var now = Date.now();
+    if (now - lastMoveTime > 16) {
+      lastMoveTime = now;
+      if (window.pywebview && window.pywebview.api && window.pywebview.api.move_window) {
+        window.pywebview.api.move_window(dx, dy);
+      }
+    }
+  });
+
+  document.addEventListener('mouseup', function() {
+    isDragging = false;
+  });
+});
+
+// ========== Toast提示 ==========
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  const icons = { success: '✓', error: '✕', info: 'ℹ' };
+  toast.innerHTML = '<span>' + (icons[type] || 'ℹ') + '</span><span>' + message + '</span>';
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(100%)';
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+</script>
+</body>
+</html>

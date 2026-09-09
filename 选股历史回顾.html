@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>选股历史回顾 · A股智能选股系统</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0e1217; color: #e0e6ed; line-height: 1.6; font-size: 14px; min-height: 100vh;
+}
+:root {
+    --bg: #0e1217; --card: #1a1f2e; --border: #2a3142; --text: #e0e6ed;
+    --text-sec: #8b95a7; --up: #ff4d4f; --down: #52c41a; --flat: #8b95a7;
+    --accent: #6366f1; --accent-light: rgba(99,102,241,0.15);
+    --warn: #faad14;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 20px 24px 40px; }
+.header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 20px;
+}
+.header h1 { font-size: 22px; font-weight: 700; }
+.header .sub { font-size: 13px; color: var(--text-sec); margin-left: 8px; font-weight: 400; }
+.header-right { display: flex; gap: 10px; }
+.btn {
+    padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); cursor: pointer; font-size: 13px;
+    transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { border-color: var(--accent); background: var(--accent-light); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-danger { color: var(--down); border-color: rgba(82,196,26,0.3); }
+
+.stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 20px; }
+.stat-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px;
+}
+.stat-card .label { font-size: 12px; color: var(--text-sec); margin-bottom: 8px; }
+.stat-card .value { font-size: 26px; font-weight: 700; font-family: "SF Mono", "Consolas", monospace; }
+.stat-card .value.accent { color: var(--accent); }
+.stat-card .value.up { color: var(--up); }
+.stat-card .value.down { color: var(--down); }
+.stat-card .value.warn { color: var(--warn); }
+
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.chart-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px;
+}
+.chart-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-sec); }
+.chart-card canvas { width: 100%; height: 220px; }
+
+.section-title {
+    font-size: 15px; font-weight: 600; color: var(--text-sec); margin: 24px 0 12px;
+    display: flex; align-items: center; gap: 8px;
+}
+.section-title::before { content: ""; width: 3px; height: 16px; background: var(--accent); border-radius: 2px; }
+
+.history-item {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 12px; overflow: hidden; transition: all 0.2s;
+}
+.history-item:hover { border-color: var(--accent); }
+.history-header {
+    padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+}
+.history-header:hover { background: rgba(99,102,241,0.05); }
+.history-left { display: flex; align-items: center; gap: 16px; }
+.history-date { font-size: 15px; font-weight: 600; font-family: "SF Mono", "Consolas", monospace; }
+.history-strategy {
+    padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600;
+    background: var(--accent-light); color: var(--accent);
+}
+.history-count { font-size: 13px; color: var(--text-sec); }
+.history-count .num { font-size: 18px; color: var(--accent); font-weight: 700; margin-right: 4px; }
+.history-right { display: flex; align-items: center; gap: 10px; }
+.expand-icon { font-size: 12px; color: var(--text-sec); transition: transform 0.2s; }
+.history-item.expanded .expand-icon { transform: rotate(180deg); }
+
+.history-detail {
+    display: none; padding: 0 18px 16px; border-top: 1px solid var(--border);
+}
+.history-item.expanded .history-detail { display: block; }
+.stock-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 14px;
+}
+.stock-chip {
+    padding: 8px 12px; background: #141822; border: 1px solid var(--border);
+    border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
+}
+.stock-chip .name { font-weight: 600; font-size: 13px; }
+.stock-chip .code { font-size: 11px; color: var(--text-sec); font-family: "Consolas", monospace; }
+.stock-chip .score {
+    font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+    background: var(--accent-light); color: var(--accent);
+}
+
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-sec); }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state .text { font-size: 14px; margin-bottom: 4px; }
+.empty-state .hint { font-size: 12px; opacity: 0.7; }
+
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
+.toast {
+    padding: 12px 20px; border-radius: 8px; margin-bottom: 8px;
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    font-size: 13px; animation: slideIn 0.3s ease;
+}
+.toast.success { border-color: rgba(82,196,26,0.5); }
+.toast.error { border-color: rgba(255,77,79,0.5); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+@media (max-width: 900px) {
+    .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    .chart-row { grid-template-columns: 1fr; }
+}
+</style>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0e1217">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="智能选股">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <link rel="icon" type="image/png" href="./icons/icon-192.png">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>选股历史回顾 <span class="sub">五维共振 · 历史选股回溯</span></h1>
+        </div>
+        <div class="header-right">
+            <button class="btn" onclick="exportHistory()">📥 导出CSV</button>
+            <button class="btn btn-danger" onclick="clearHistory()">🗑️ 清空历史</button>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="label">选股次数</div>
+            <div class="value accent" id="totalSessions">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">累计入选</div>
+            <div class="value" id="totalPicks">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">日均入选</div>
+            <div class="value" id="avgPicks">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">覆盖股票</div>
+            <div class="value warn" id="uniqueStocks">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">最高入选</div>
+            <div class="value up" id="maxPicks">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">最近选股</div>
+            <div class="value" id="lastDate" style="font-size:16px">--</div>
+        </div>
+    </div>
+
+    <div class="chart-row">
+        <div class="chart-card">
+            <h3>入选数量趋势</h3>
+            <canvas id="trendChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>高频入选股票 TOP10</h3>
+            <canvas id="freqChart"></canvas>
+        </div>
+    </div>
+
+    <div class="section-title">历史记录</div>
+    <div id="historyList"></div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const STORAGE_KEY = 'astock_selection_history';
+let history = [];
+
+function loadHistory() {
+    try {
+        history = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch(e) { history = []; }
+}
+
+function showToast(msg, type='success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function getStockList(item) {
+    if (item.stocks && Array.isArray(item.stocks)) {
+        return item.stocks.map(s => typeof s === 'string' ? {name: s, code: s} : {name: s.name || s.code, code: s.code || s.name, score: s.score});
+    }
+    return [];
+}
+
+function renderStats() {
+    if (history.length === 0) return;
+
+    const totalPicks = history.reduce((sum, item) => sum + (item.count || getStockList(item).length), 0);
+    const allStocks = [];
+    history.forEach(item => {
+        getStockList(item).forEach(s => allStocks.push(s.code || s.name));
+    });
+    const uniqueStocks = new Set(allStocks).size;
+    const maxPicks = Math.max(...history.map(item => item.count || getStockList(item).length));
+    const dates = history.map(item => item.date || item.time || '').filter(d => d);
+    const lastDate = dates[0] || '--';
+
+    document.getElementById('totalSessions').textContent = history.length;
+    document.getElementById('totalPicks').textContent = totalPicks;
+    document.getElementById('avgPicks').textContent = (totalPicks / history.length).toFixed(1);
+    document.getElementById('uniqueStocks').textContent = uniqueStocks;
+    document.getElementById('maxPicks').textContent = maxPicks;
+    document.getElementById('lastDate').textContent = lastDate.length > 10 ? lastDate.substring(0, 10) : lastDate;
+}
+
+function renderTrendChart() {
+    const canvas = document.getElementById('trendChart');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width = canvas.offsetWidth * 2;
+    const H = canvas.height = 220 * 2;
+    ctx.scale(2, 2);
+    ctx.clearRect(0, 0, W/2, H/2);
+
+    if (history.length === 0) {
+        ctx.fillStyle = '#8b95a7';
+        ctx.font = '13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('暂无数据', W/4, H/4);
+        return;
+    }
+
+    const data = history.slice(0, 20).reverse();
+    const maxVal = Math.max(...data.map(d => d.count || getStockList(d).length), 1);
+    const chartW = W/2 - 40, chartH = H/2 - 40;
+    const barW = Math.min(30, chartW / data.length - 8);
+    const startX = 30;
+
+    ctx.strokeStyle = '#2a3142';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = 20 + (chartH / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(startX, y);
+        ctx.lineTo(W/2 - 10, y);
+        ctx.stroke();
+    }
+
+    data.forEach((item, i) => {
+        const val = item.count || getStockList(item).length;
+        const h = (val / maxVal) * chartH;
+        const x = startX + i * (barW + 8) + barW/2;
+        const y = 20 + chartH - h;
+
+        const grad = ctx.createLinearGradient(x, y, x, 20 + chartH);
+        grad.addColorStop(0, '#6366f1');
+        grad.addColorStop(1, 'rgba(99,102,241,0.3)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x - barW/2, y, barW, h);
+
+        ctx.fillStyle = '#e0e6ed';
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(val, x, y - 5);
+
+        ctx.fillStyle = '#8b95a7';
+        ctx.font = '9px sans-serif';
+        const date = (item.date || item.time || '').substring(5, 10);
+        ctx.fillText(date, x, 20 + chartH + 14);
+    });
+}
+
+function renderFreqChart() {
+    const canvas = document.getElementById('freqChart');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width = canvas.offsetWidth * 2;
+    const H = canvas.height = 220 * 2;
+    ctx.scale(2, 2);
+    ctx.clearRect(0, 0, W/2, H/2);
+
+    if (history.length === 0) {
+        ctx.fillStyle = '#8b95a7';
+        ctx.font = '13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('暂无数据', W/4, H/4);
+        return;
+    }
+
+    const freq = {};
+    history.forEach(item => {
+        getStockList(item).forEach(s => {
+            const key = s.name || s.code;
+            freq[key] = (freq[key] || 0) + 1;
+        });
+    });
+
+    const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    if (sorted.length === 0) return;
+
+    const maxVal = sorted[0][1];
+    const barH = Math.min(16, (H/2 - 40) / sorted.length - 4);
+    const startY = 20;
+
+    sorted.forEach((item, i) => {
+        const y = startY + i * (barH + 6);
+        const w = (item[1] / maxVal) * (W/2 - 100);
+        ctx.fillStyle = '#6366f1';
+        ctx.fillRect(80, y, w, barH);
+        ctx.fillStyle = '#e0e6ed';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(item[0].substring(0, 6), 75, y + barH/2 + 4);
+        ctx.fillStyle = '#8b95a7';
+        ctx.textAlign = 'left';
+        ctx.fillText(item[1] + '次', 85 + w, y + barH/2 + 4);
+    });
+}
+
+function renderHistory() {
+    const container = document.getElementById('historyList');
+    if (history.length === 0) {
+        container.innerHTML = `<div class="empty-state">
+            <div class="icon">📋</div>
+            <div class="text">暂无选股历史记录</div>
+            <div class="hint">使用智能选股器保存选股结果后，将在此处显示</div>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = history.map((item, idx) => {
+        const stocks = getStockList(item);
+        const count = item.count || stocks.length;
+        const date = item.date || item.time || '--';
+        const strategy = item.strategy || '五维共振';
+        const stocksHtml = stocks.map(s => `
+            <div class="stock-chip">
+                <div>
+                    <div class="name">${s.name || s.code}</div>
+                    <div class="code">${s.code || ''}</div>
+                </div>
+                ${s.score ? `<div class="score">${s.score}</div>` : ''}
+            </div>
+        `).join('');
+
+        return `<div class="history-item" data-idx="${idx}">
+            <div class="history-header" onclick="toggleDetail(${idx})">
+                <div class="history-left">
+                    <span class="history-date">${date}</span>
+                    <span class="history-strategy">${strategy}</span>
+                </div>
+                <div class="history-right">
+                    <span class="history-count"><span class="num">${count}</span>只入选</span>
+                    <span class="expand-icon">▼</span>
+                </div>
+            </div>
+            <div class="history-detail">
+                <div class="stock-grid">${stocksHtml}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function toggleDetail(idx) {
+    const item = document.querySelector(`.history-item[data-idx="${idx}"]`);
+    if (item) item.classList.toggle('expanded');
+}
+
+function exportHistory() {
+    if (history.length === 0) { showToast('暂无历史记录', 'error'); return; }
+    let csv = '日期,策略,股票代码,股票名称,评分\n';
+    history.forEach(item => {
+        const date = item.date || item.time || '';
+        const strategy = item.strategy || '五维共振';
+        getStockList(item).forEach(s => {
+            csv += `${date},${strategy},${s.code || ''},${s.name || ''},${s.score || ''}\n`;
+        });
+    });
+    const blob = new Blob(['\ufeff' + csv], {type: 'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `选股历史_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('导出成功');
+}
+
+function clearHistory() {
+    if (!confirm('确定清空所有选股历史吗？此操作不可恢复。')) return;
+    history = [];
+    localStorage.removeItem(STORAGE_KEY);
+    renderAll();
+    showToast('历史已清空');
+}
+
+function renderAll() {
+    renderStats();
+    renderTrendChart();
+    renderFreqChart();
+    renderHistory();
+}
+
+loadHistory();
+renderAll();
+window.addEventListener('resize', () => { renderTrendChart(); renderFreqChart(); });
+</script>
+
+<!-- 移动端底部导航 -->
+<div class="mobile-bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(26,31,46,0.95);backdrop-filter:blur(20px);border-top:1px solid #2a3142;display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom,0px));z-index:997;">
+  <a class="mobile-nav-item" href="./mobile.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🏠</span>首页</a>
+  <a class="mobile-nav-item" href="./A股实时看板.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">📊</span>看板</a>
+  <a class="mobile-nav-item" href="./智能选股器.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🎯</span>选股</a>
+  <a class="mobile-nav-item" href="./持仓管理.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">💼</span>持仓</a>
+  <a class="mobile-nav-item" href="./价格预警.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🔔</span>预警</a>
+</div>
+<script>
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+  var nav = document.querySelector('.mobile-bottom-nav');
+  if (nav) nav.style.display = 'flex';
+  document.body.style.paddingBottom = 'calc(70px + env(safe-area-inset-bottom,0px))';
+}
+</script>
+
+</body>
+</html>

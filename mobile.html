@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="智能选股">
+<meta name="theme-color" content="#0e1217">
+<meta name="description" content="A股智能选股系统 - 五维共振选股体系">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>A股智能选股系统</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+:root {
+    --bg: #0e1217; --card: #1a1f2e; --card-hover: #222838; --border: #2a3142;
+    --text: #e0e6ed; --text-sec: #8b95a7; --accent: #6366f1; --accent-light: rgba(99,102,241,0.15);
+    --up: #ff4d4f; --down: #52c41a; --warn: #faad14;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+}
+html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+    font-size: 15px; overflow-x: hidden; min-height: 100vh;
+}
+body { padding-bottom: calc(70px + var(--safe-bottom)); }
+
+/* 启动画面 */
+#splash {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--bg); z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.5s ease;
+}
+#splash.hide { opacity: 0; pointer-events: none; }
+.splash-icon {
+    width: 90px; height: 90px; border-radius: 22px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px; margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(99,102,241,0.4);
+    animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.splash-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.splash-sub { font-size: 13px; color: var(--text-sec); }
+.splash-loading { margin-top: 30px; width: 30px; height: 30px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 顶部状态栏 */
+.status-bar {
+    padding: calc(12px + var(--safe-top)) 16px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg); position: sticky; top: 0; z-index: 100;
+    border-bottom: 1px solid var(--border);
+}
+.status-left { display: flex; align-items: center; gap: 10px; }
+.app-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.app-name { font-size: 17px; font-weight: 700; }
+.market-status {
+    font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 600;
+}
+.market-status.open { background: rgba(82,196,26,0.15); color: var(--down); }
+.market-status.closed { background: rgba(139,149,167,0.15); color: var(--text-sec); }
+
+/* 主内容区 */
+.content { padding: 16px; }
+
+/* 市场概览卡片 */
+.market-overview {
+    background: var(--card); border-radius: 14px; padding: 16px; margin-bottom: 16px;
+    border: 1px solid var(--border);
+}
+.overview-title { font-size: 13px; color: var(--text-sec); margin-bottom: 12px; font-weight: 600; }
+.index-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.index-row:last-child { margin-bottom: 0; }
+.index-name { font-size: 14px; color: var(--text); }
+.index-value { font-family: "SF Mono", "Consolas", monospace; font-size: 14px; font-weight: 600; }
+.index-pct { font-family: "SF Mono", "Consolas", monospace; font-size: 13px; font-weight: 700; min-width: 60px; text-align: right; }
+.up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--text-sec); }
+
+/* 功能网格 */
+.section-title { font-size: 14px; color: var(--text-sec); margin: 20px 0 12px; font-weight: 600; padding-left: 4px; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+.feature-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 16px; cursor: pointer; transition: all 0.2s;
+    display: flex; flex-direction: column; gap: 8px;
+}
+.feature-card:active { background: var(--card-hover); transform: scale(0.98); }
+.feature-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+}
+.feature-name { font-size: 15px; font-weight: 600; }
+.feature-desc { font-size: 11px; color: var(--text-sec); line-height: 1.4; }
+
+/* 快捷统计 */
+.stats-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.stat-mini {
+    flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; text-align: center;
+}
+.stat-mini .val { font-size: 20px; font-weight: 700; font-family: "SF Mono", "Consolas", monospace; }
+.stat-mini .lbl { font-size: 11px; color: var(--text-sec); margin-top: 4px; }
+
+/* 底部导航 */
+.bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(26,31,46,0.95); backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: space-around;
+    padding: 8px 0 calc(8px + var(--safe-bottom));
+    z-index: 1000;
+}
+.nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 16px; cursor: pointer; color: var(--text-sec);
+    transition: color 0.2s; text-decoration: none;
+}
+.nav-item.active { color: var(--accent); }
+.nav-item .icon { font-size: 22px; }
+.nav-item .label { font-size: 10px; font-weight: 600; }
+
+/* 安装提示 */
+.install-prompt {
+    position: fixed; bottom: calc(90px + var(--safe-bottom)); left: 16px; right: 16px;
+    background: var(--card); border: 1px solid var(--accent); border-radius: 14px;
+    padding: 16px; z-index: 999; display: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.install-prompt.show { display: block; animation: slideUp 0.3s ease; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.install-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.install-desc { font-size: 12px; color: var(--text-sec); margin-bottom: 12px; }
+.install-btns { display: flex; gap: 10px; }
+.install-btn {
+    flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+}
+.install-btn.primary { background: var(--accent); color: #fff; }
+.install-btn.secondary { background: var(--border); color: var(--text); }
+
+/* Toast */
+.toast-container { position: fixed; top: calc(60px + var(--safe-top)); left: 50%; transform: translateX(-50%); z-index: 2000; }
+.toast {
+    padding: 10px 20px; border-radius: 8px; background: var(--card);
+    border: 1px solid var(--border); font-size: 13px; margin-bottom: 8px;
+    animation: toastIn 0.3s ease;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 下拉刷新 */
+.pull-refresh {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 0; overflow: hidden;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    transition: height 0.2s; z-index: 999;
+}
+.pull-refresh.show { height: 50px; }
+.pull-refresh .spinner {
+    width: 20px; height: 20px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+</style>
+</head>
+<body>
+<div class="pull-refresh" id="pullRefresh"><div class="spinner"></div></div>
+
+<!-- 启动画面 -->
+<div id="splash">
+    <div class="splash-icon">📈</div>
+    <div class="splash-title">A股智能选股系统</div>
+    <div class="splash-sub">五维共振 · 实时行情 · 智能决策</div>
+    <div class="splash-loading"></div>
+</div>
+
+<!-- 顶部状态栏 -->
+<div class="status-bar">
+    <div class="status-left">
+        <div class="app-icon">📈</div>
+        <div class="app-name">智能选股</div>
+    </div>
+    <div class="market-status" id="marketStatus">加载中...</div>
+</div>
+
+<div class="content">
+    <!-- 市场概览 -->
+    <div class="market-overview">
+        <div class="overview-title">大盘指数</div>
+        <div id="indexList">
+            <div class="index-row"><span class="index-name">上证指数</span><span class="index-value flat">--</span><span class="index-pct flat">--</span></div>
+            <div class="index-row"><span class="index-name">深证成指</span><span class="index-value flat">--</span><span class="index-pct flat">--</span></div>
+            <div class="index-row"><span class="index-name">创业板指</span><span class="index-value flat">--</span><span class="index-pct flat">--</span></div>
+        </div>
+    </div>
+
+    <!-- 快捷统计 -->
+    <div class="stats-row">
+        <div class="stat-mini"><div class="val" id="favCount">0</div><div class="lbl">自选股</div></div>
+        <div class="stat-mini"><div class="val" id="posCount">0</div><div class="lbl">持仓数</div></div>
+        <div class="stat-mini"><div class="val" id="alertCount">0</div><div class="lbl">预警中</div></div>
+    </div>
+
+    <!-- 核心功能 -->
+    <div class="section-title">核心功能</div>
+    <div class="grid">
+        <div class="feature-card" onclick="openPage('A股实时看板.html')">
+            <div class="feature-icon" style="background:rgba(99,102,241,0.15)">📊</div>
+            <div class="feature-name">实时看板</div>
+            <div class="feature-desc">81只龙头股实时行情、五维评分</div>
+        </div>
+        <div class="feature-card" onclick="openPage('智能选股器.html')">
+            <div class="feature-icon" style="background:rgba(82,196,26,0.15)">🎯</div>
+            <div class="feature-name">智能选股</div>
+            <div class="feature-desc">五维共振多条件筛选选股</div>
+        </div>
+        <div class="feature-card" onclick="openPage('持仓管理.html')">
+            <div class="feature-icon" style="background:rgba(250,173,20,0.15)">💼</div>
+            <div class="feature-name">持仓管理</div>
+            <div class="feature-desc">持仓盈亏、资产分布、交易记录</div>
+        </div>
+        <div class="feature-card" onclick="openPage('价格预警.html')">
+            <div class="feature-icon" style="background:rgba(255,77,79,0.15)">🔔</div>
+            <div class="feature-name">价格预警</div>
+            <div class="feature-desc">突破/跌破预警，实时提醒</div>
+        </div>
+        <div class="feature-card" onclick="openPage('选股历史回顾.html')">
+            <div class="feature-icon" style="background:rgba(139,92,246,0.15)">📋</div>
+            <div class="feature-name">选股历史</div>
+            <div class="feature-desc">历史选股记录回溯与统计</div>
+        </div>
+        <div class="feature-card" onclick="openPage('app.html')">
+            <div class="feature-icon" style="background:rgba(56,189,248,0.15)">⚙️</div>
+            <div class="feature-name">应用设置</div>
+            <div class="feature-desc">系统设置、关于、清除缓存</div>
+        </div>
+    </div>
+</div>
+
+<!-- 安装提示 -->
+<div class="install-prompt" id="installPrompt">
+    <div class="install-title">📱 添加到主屏幕</div>
+    <div class="install-desc">将本应用添加到手机主屏幕，即可像原生App一样全屏使用，支持离线访问。</div>
+    <div class="install-btns">
+        <button class="install-btn secondary" onclick="hideInstallPrompt()">稍后</button>
+        <button class="install-btn primary" onclick="showInstallGuide()">查看方法</button>
+    </div>
+</div>
+
+<!-- 底部导航 -->
+<div class="bottom-nav">
+    <a class="nav-item active" href="./mobile.html">
+        <span class="icon">🏠</span><span class="label">首页</span>
+    </a>
+    <a class="nav-item" href="./A股实时看板.html">
+        <span class="icon">📊</span><span class="label">看板</span>
+    </a>
+    <a class="nav-item" href="./智能选股器.html">
+        <span class="icon">🎯</span><span class="label">选股</span>
+    </a>
+    <a class="nav-item" href="./持仓管理.html">
+        <span class="icon">💼</span><span class="label">持仓</span>
+    </a>
+    <a class="nav-item" href="./价格预警.html">
+        <span class="icon">🔔</span><span class="label">预警</span>
+    </a>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// 启动画面
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        document.getElementById('splash').classList.add('hide');
+    }, 1200);
+});
+
+// 注册Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+            .then(reg => console.log('SW注册成功'))
+            .catch(err => console.log('SW注册失败:', err));
+    });
+}
+
+// PWA安装事件
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    setTimeout(() => {
+        if (!localStorage.getItem('install_prompt_shown')) {
+            document.getElementById('installPrompt').classList.add('show');
+            localStorage.setItem('install_prompt_shown', '1');
+        }
+    }, 3000);
+});
+
+function hideInstallPrompt() {
+    document.getElementById('installPrompt').classList.remove('show');
+}
+
+function showInstallGuide() {
+    hideInstallPrompt();
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+    let guide = '';
+    if (isIOS) {
+        guide = 'iOS安装方法：\n1. 点击底部分享按钮\n2. 选择"添加到主屏幕"\n3. 点击"添加"';
+    } else if (isAndroid) {
+        guide = '安卓安装方法：\n1. 点击浏览器菜单(⋮)\n2. 选择"添加到主屏幕"或"安装应用"\n3. 确认添加';
+    } else {
+        guide = '请在手机浏览器中打开此页面，然后选择"添加到主屏幕"';
+    }
+    alert(guide);
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+    }
+}
+
+// 页面跳转
+function openPage(url) {
+    window.location.href = './' + url;
+}
+
+// Toast提示
+function showToast(msg) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+}
+
+// 加载大盘指数
+async function loadIndices() {
+    try {
+        const url = 'https://push2delay.eastmoney.com/api/qt/ulist.np/get?secids=1.000001,0.399001,0.399006&fields=f2,f3,f4,f12,f14';
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data && data.data && data.data.diff) {
+            const names = ['上证指数', '深证成指', '创业板指'];
+            const html = data.data.diff.map((item, i) => {
+                const pct = item.f3 / 100;
+                const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+                const sign = pct > 0 ? '+' : '';
+                return `<div class="index-row">
+                    <span class="index-name">${names[i] || item.f14}</span>
+                    <span class="index-value ${cls}">${item.f2.toFixed(2)}</span>
+                    <span class="index-pct ${cls}">${sign}${pct.toFixed(2)}%</span>
+                </div>`;
+            }).join('');
+            document.getElementById('indexList').innerHTML = html;
+        }
+    } catch(e) { console.log('指数加载失败', e); }
+}
+
+// 市场状态
+function updateMarketStatus() {
+    const now = new Date();
+    const day = now.getDay();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    const time = hour * 60 + minute;
+    const isWeekday = day >= 1 && day <= 5;
+    const isMorning = time >= 9 * 60 + 30 && time <= 11 * 60 + 30;
+    const isAfternoon = time >= 13 * 60 && time <= 15 * 60;
+    const el = document.getElementById('marketStatus');
+    if (isWeekday && (isMorning || isAfternoon)) {
+        el.textContent = '交易中';
+        el.className = 'market-status open';
+    } else {
+        el.textContent = '已休市';
+        el.className = 'market-status closed';
+    }
+}
+
+// 加载本地统计
+function loadLocalStats() {
+    try {
+        const fav = JSON.parse(localStorage.getItem('astock_favorites') || '[]');
+        const pos = JSON.parse(localStorage.getItem('astock_positions') || '[]');
+        const alerts = JSON.parse(localStorage.getItem('astock_price_alerts') || '[]');
+        const activeAlerts = alerts.filter(a => a.enabled !== false);
+        document.getElementById('favCount').textContent = fav.length;
+        document.getElementById('posCount').textContent = pos.length;
+        document.getElementById('alertCount').textContent = activeAlerts.length;
+    } catch(e) {}
+}
+
+// 初始化
+loadIndices();
+updateMarketStatus();
+loadLocalStats();
+setInterval(loadIndices, 30000);
+setInterval(updateMarketStatus, 60000);
+
+// 监听其他页面的storage变化
+window.addEventListener('storage', (e) => {
+    if (['astock_favorites', 'astock_positions', 'astock_price_alerts'].includes(e.key)) {
+        loadLocalStats();
+    }
+});
+
+
+// 下拉刷新
+let touchStartY = 0;
+let isPulling = false;
+document.addEventListener('touchstart', (e) => {
+    if (window.scrollY === 0) {
+        touchStartY = e.touches[0].clientY;
+        isPulling = true;
+    }
+}, { passive: true });
+document.addEventListener('touchmove', (e) => {
+    if (!isPulling) return;
+    const diff = e.touches[0].clientY - touchStartY;
+    if (diff > 60) {
+        document.getElementById('pullRefresh').classList.add('show');
+    }
+}, { passive: true });
+document.addEventListener('touchend', (e) => {
+    if (!isPulling) return;
+    isPulling = false;
+    const pullEl = document.getElementById('pullRefresh');
+    if (pullEl.classList.contains('show')) {
+        setTimeout(() => {
+            loadIndices();
+            loadLocalStats();
+            updateMarketStatus();
+            pullEl.classList.remove('show');
+        }, 800);
+    }
+});
+
+// 应用更新检测
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (confirm('发现新版本，是否刷新更新？')) {
+            window.location.reload();
+        }
+    });
+}
+
+</script>
+</body>
+</html>

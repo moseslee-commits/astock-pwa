@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>价格预警 · A股智能选股系统</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0e1217; color: #e0e6ed; line-height: 1.6; font-size: 14px; min-height: 100vh;
+}
+:root {
+    --bg: #0e1217; --card: #1a1f2e; --border: #2a3142; --text: #e0e6ed;
+    --text-sec: #8b95a7; --up: #ff4d4f; --down: #52c41a; --flat: #8b95a7;
+    --accent: #6366f1; --accent-light: rgba(99,102,241,0.15);
+    --warn: #faad14; --warn-light: rgba(250,173,20,0.15);
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 20px 24px 40px; }
+.header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 20px;
+}
+.header h1 { font-size: 22px; font-weight: 700; }
+.header .sub { font-size: 13px; color: var(--text-sec); margin-left: 8px; font-weight: 400; }
+.header-right { display: flex; gap: 10px; align-items: center; }
+.btn {
+    padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); cursor: pointer; font-size: 13px;
+    transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { border-color: var(--accent); background: var(--accent-light); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: #5558e3; }
+.btn-danger { color: var(--down); border-color: rgba(82,196,26,0.3); }
+.btn-danger:hover { background: rgba(82,196,26,0.1); }
+.btn-warn { color: var(--warn); border-color: rgba(250,173,20,0.3); }
+.btn-warn:hover { background: var(--warn-light); }
+
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+.stat-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px;
+}
+.stat-card .label { font-size: 12px; color: var(--text-sec); margin-bottom: 8px; }
+.stat-card .value { font-size: 28px; font-weight: 700; font-family: "SF Mono", "Consolas", monospace; }
+.stat-card .value.up { color: var(--up); }
+.stat-card .value.down { color: var(--down); }
+.stat-card .value.warn { color: var(--warn); }
+
+.tabs { display: flex; gap: 0; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.tab-btn {
+    padding: 10px 20px; background: none; border: none; cursor: pointer;
+    font-size: 14px; color: var(--text-sec); border-bottom: 2px solid transparent;
+    transition: all 0.2s; font-weight: 500;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+table {
+    width: 100%; border-collapse: collapse; background: var(--card);
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+}
+th {
+    background: #141822; color: var(--text-sec); font-weight: 600; font-size: 12px;
+    padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+th.num { text-align: right; }
+td { padding: 10px 12px; border-bottom: 1px solid rgba(42,49,66,0.5); font-size: 13px; }
+td.num { text-align: right; font-family: "SF Mono", "Consolas", monospace; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+tr:hover { background: rgba(99,102,241,0.05); }
+.code { color: var(--text-sec); font-family: "Consolas", monospace; font-size: 12px; }
+.name { font-weight: 600; }
+.up { color: var(--up); }
+.down { color: var(--down); }
+.flat { color: var(--flat); }
+.warn { color: var(--warn); }
+
+.alert-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+}
+.alert-tag.up { background: rgba(255,77,79,0.15); color: var(--up); }
+.alert-tag.down { background: rgba(82,196,26,0.12); color: var(--down); }
+.alert-tag.triggered { background: var(--warn-light); color: var(--warn); }
+
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-sec); }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state .text { font-size: 14px; margin-bottom: 4px; }
+.empty-state .hint { font-size: 12px; opacity: 0.7; margin-bottom: 16px; }
+
+.modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; width: 420px; max-width: 90vw;
+}
+.modal h3 { font-size: 18px; margin-bottom: 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; color: var(--text-sec); margin-bottom: 6px; }
+.form-group input, .form-group select {
+    width: 100%; padding: 10px 12px; background: #141822; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 14px; outline: none;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
+.toast {
+    padding: 12px 20px; border-radius: 8px; margin-bottom: 8px;
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    font-size: 13px; animation: slideIn 0.3s ease;
+}
+.toast.success { border-color: rgba(82,196,26,0.5); }
+.toast.error { border-color: rgba(255,77,79,0.5); }
+.toast.warn { border-color: rgba(250,173,20,0.5); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.switch {
+    position: relative; display: inline-block; width: 40px; height: 22px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #2a3142; transition: .3s; border-radius: 22px;
+}
+.slider:before {
+    position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+    background-color: white; transition: .3s; border-radius: 50%;
+}
+input:checked + .slider { background-color: var(--accent); }
+input:checked + .slider:before { transform: translateX(18px); }
+</style>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0e1217">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="智能选股">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <link rel="icon" type="image/png" href="./icons/icon-192.png">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>价格预警 <span class="sub">实时监控 · 触发提醒</span></h1>
+        </div>
+        <div class="header-right">
+            <span id="updateTime" style="font-size:12px;color:var(--text-sec)">监控中...</span>
+            <button class="btn" onclick="checkAlerts()">🔄 立即检查</button>
+            <button class="btn btn-primary" onclick="openAddModal()">➕ 添加预警</button>
+        </div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="label">活跃预警</div>
+            <div class="value" id="activeCount">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">今日触发</div>
+            <div class="value warn" id="todayTriggered">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">累计触发</div>
+            <div class="value" id="totalTriggered">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">监控状态</div>
+            <div class="value up" id="monitorStatus" style="font-size:16px">运行中</div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="alerts">预警列表 (<span id="alertCount">0</span>)</button>
+        <button class="tab-btn" data-tab="history">触发历史 (<span id="historyCount">0</span>)</button>
+    </div>
+
+    <div class="tab-content active" id="tab-alerts">
+        <table id="alertTable">
+            <thead>
+                <tr>
+                    <th>代码</th><th>名称</th><th>类型</th><th class="num">目标价</th>
+                    <th class="num">现价</th><th class="num">距离</th><th>状态</th><th>启用</th><th class="num">操作</th>
+                </tr>
+            </thead>
+            <tbody id="alertBody"></tbody>
+        </table>
+        <div class="empty-state" id="alertEmpty" style="display:none">
+            <div class="icon">🔔</div>
+            <div class="text">暂无预警</div>
+            <div class="hint">点击右上角"添加预警"开始监控</div>
+            <button class="btn btn-primary" onclick="openAddModal()">添加预警</button>
+        </div>
+    </div>
+
+    <div class="tab-content" id="tab-history">
+        <table id="historyTable">
+            <thead>
+                <tr><th>触发时间</th><th>代码</th><th>名称</th><th>类型</th><th class="num">目标价</th><th class="num">触发价</th></tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+        </table>
+        <div class="empty-state" id="historyEmpty" style="display:none">
+            <div class="icon">📋</div>
+            <div class="text">暂无触发记录</div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="addModal">
+    <div class="modal">
+        <h3>添加价格预警</h3>
+        <div class="form-group">
+            <label>股票代码</label>
+            <input type="text" id="inputCode" placeholder="如：600519" maxlength="6">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>预警类型</label>
+                <select id="inputType">
+                    <option value="up">价格突破（上涨到）</option>
+                    <option value="down">价格跌破（下跌到）</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>目标价格</label>
+                <input type="number" id="inputPrice" placeholder="0.00" step="0.01">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>备注（可选）</label>
+            <input type="text" id="inputNote" placeholder="如：突破压力位">
+        </div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeAddModal()">取消</button>
+            <button class="btn btn-primary" onclick="addAlert()">确认添加</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const ALERT_KEY = 'astock_price_alerts';
+const HISTORY_KEY = 'astock_alert_history';
+let alerts = [];
+let history = [];
+let priceCache = {};
+
+function loadData() {
+    try {
+        alerts = JSON.parse(localStorage.getItem(ALERT_KEY)) || [];
+        history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+    } catch(e) { alerts = []; history = []; }
+}
+
+function saveData() {
+    localStorage.setItem(ALERT_KEY, JSON.stringify(alerts));
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function showToast(msg, type='success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+}
+
+function openAddModal() {
+    document.getElementById('addModal').classList.add('active');
+    document.getElementById('inputCode').value = '';
+    document.getElementById('inputPrice').value = '';
+    document.getElementById('inputNote').value = '';
+    document.getElementById('inputType').value = 'up';
+    document.getElementById('inputCode').focus();
+}
+
+function closeAddModal() {
+    document.getElementById('addModal').classList.remove('active');
+}
+
+async function addAlert() {
+    const code = document.getElementById('inputCode').value.trim();
+    const type = document.getElementById('inputType').value;
+    const price = parseFloat(document.getElementById('inputPrice').value);
+    const note = document.getElementById('inputNote').value.trim();
+
+    if (!code || code.length !== 6) { showToast('请输入6位股票代码', 'error'); return; }
+    if (!price || price <= 0) { showToast('请输入有效价格', 'error'); return; }
+
+    let name = code;
+    try {
+        const secid = (code.startsWith('6') ? '1.' : '0.') + code;
+        const resp = await fetch(`https://push2delay.eastmoney.com/api/qt/stock/get?secid=${secid}&fields=f58,f43`);
+        const data = await resp.json();
+        if (data?.data?.f58) name = data.data.f58;
+        if (data?.data?.f43) priceCache[code] = data.data.f43 / 100;
+    } catch(e) {}
+
+    alerts.push({
+        id: Date.now(), code, name, type, targetPrice: price,
+        note, enabled: true, createdAt: new Date().toLocaleString(), triggered: false
+    });
+
+    saveData();
+    closeAddModal();
+    render();
+    showToast('预警添加成功');
+}
+
+function deleteAlert(id) {
+    if (!confirm('确定删除该预警吗？')) return;
+    alerts = alerts.filter(a => a.id !== id);
+    saveData();
+    render();
+    showToast('已删除');
+}
+
+function toggleAlert(id) {
+    const alert = alerts.find(a => a.id === id);
+    if (alert) {
+        alert.enabled = !alert.enabled;
+        saveData();
+        render();
+    }
+}
+
+async function fetchPrices() {
+    const activeAlerts = alerts.filter(a => a.enabled && !a.triggered);
+    if (activeAlerts.length === 0) return;
+    const codes = activeAlerts.map(a => (a.code.startsWith('6') ? '1.' : '0.') + a.code).join(',');
+    try {
+        const resp = await fetch(`https://push2delay.eastmoney.com/api/qt/ulist.np/get?secids=${codes}&fields=f2,f3,f12,f14`);
+        const data = await resp.json();
+        if (data?.data?.diff) {
+            data.data.diff.forEach(item => {
+                priceCache[item.f12] = item.f2;
+                const alert = alerts.find(a => a.code === item.f12);
+                if (alert && item.f14) alert.name = item.f14;
+            });
+        }
+    } catch(e) {}
+}
+
+async function checkAlerts() {
+    document.getElementById('updateTime').textContent = '检查中...';
+    await fetchPrices();
+
+    alerts.forEach(alert => {
+        if (!alert.enabled || alert.triggered) return;
+        const currentPrice = priceCache[alert.code];
+        if (!currentPrice) return;
+
+        let triggered = false;
+        if (alert.type === 'up' && currentPrice >= alert.targetPrice) triggered = true;
+        if (alert.type === 'down' && currentPrice <= alert.targetPrice) triggered = true;
+
+        if (triggered) {
+            alert.triggered = true;
+            alert.triggeredAt = new Date().toLocaleString();
+            alert.triggerPrice = currentPrice;
+            history.unshift({
+                time: alert.triggeredAt, code: alert.code, name: alert.name,
+                type: alert.type, targetPrice: alert.targetPrice, triggerPrice: currentPrice
+            });
+            const typeText = alert.type === 'up' ? '突破' : '跌破';
+            showToast(`🔔 ${alert.name}(${alert.code}) ${typeText}目标价 ${alert.targetPrice}，现价 ${currentPrice}`, 'warn');
+        }
+    });
+
+    saveData();
+    render();
+    document.getElementById('updateTime').textContent = '检查于 ' + new Date().toLocaleTimeString();
+}
+
+function render() {
+    const active = alerts.filter(a => a.enabled && !a.triggered);
+    const today = new Date().toLocaleDateString();
+    const todayTriggered = history.filter(h => h.time.startsWith(today)).length;
+
+    document.getElementById('activeCount').textContent = active.length;
+    document.getElementById('todayTriggered').textContent = todayTriggered;
+    document.getElementById('totalTriggered').textContent = history.length;
+    document.getElementById('alertCount').textContent = alerts.length;
+    document.getElementById('historyCount').textContent = history.length;
+
+    const tbody = document.getElementById('alertBody');
+    const empty = document.getElementById('alertEmpty');
+    if (alerts.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        document.getElementById('alertTable').style.display = 'none';
+    } else {
+        empty.style.display = 'none';
+        document.getElementById('alertTable').style.display = 'table';
+        tbody.innerHTML = alerts.map(alert => {
+            const currentPrice = priceCache[alert.code] || '--';
+            const distance = currentPrice !== '--' ? ((currentPrice - alert.targetPrice) / alert.targetPrice * 100) : null;
+            const typeText = alert.type === 'up' ? '突破' : '跌破';
+            const typeCls = alert.type === 'up' ? 'up' : 'down';
+            const statusCls = alert.triggered ? 'triggered' : typeCls;
+            const statusText = alert.triggered ? '已触发' : '监控中';
+            const distText = distance !== null ? (distance >= 0 ? '+' : '') + distance.toFixed(2) + '%' : '--';
+            const distCls = distance !== null ? (distance >= 0 ? 'up' : 'down') : 'flat';
+            return `<tr>
+                <td class="code">${alert.code}</td>
+                <td class="name">${alert.name}</td>
+                <td><span class="alert-tag ${typeCls}">${typeText}</span></td>
+                <td class="num">${alert.targetPrice.toFixed(2)}</td>
+                <td class="num">${currentPrice !== '--' ? currentPrice.toFixed(2) : '--'}</td>
+                <td class="num ${distCls}">${distText}</td>
+                <td><span class="alert-tag ${statusCls}">${statusText}</span></td>
+                <td><label class="switch"><input type="checkbox" ${alert.enabled ? 'checked' : ''} onchange="toggleAlert(${alert.id})"><span class="slider"></span></label></td>
+                <td class="num"><button class="btn btn-danger" style="padding:4px 10px;font-size:12px" onclick="deleteAlert(${alert.id})">删除</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    const historyBody = document.getElementById('historyBody');
+    const historyEmpty = document.getElementById('historyEmpty');
+    if (history.length === 0) {
+        historyBody.innerHTML = '';
+        historyEmpty.style.display = 'block';
+        document.getElementById('historyTable').style.display = 'none';
+    } else {
+        historyEmpty.style.display = 'none';
+        document.getElementById('historyTable').style.display = 'table';
+        historyBody.innerHTML = history.map(h => {
+            const typeText = h.type === 'up' ? '突破' : '跌破';
+            const typeCls = h.type === 'up' ? 'up' : 'down';
+            return `<tr>
+                <td style="font-size:12px;color:var(--text-sec)">${h.time}</td>
+                <td class="code">${h.code}</td>
+                <td class="name">${h.name}</td>
+                <td><span class="alert-tag ${typeCls}">${typeText}</span></td>
+                <td class="num">${h.targetPrice.toFixed(2)}</td>
+                <td class="num">${h.triggerPrice.toFixed(2)}</td>
+            </tr>`;
+        }).join('');
+    }
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+    });
+});
+
+document.getElementById('addModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAddModal();
+});
+
+loadData();
+render();
+checkAlerts();
+setInterval(checkAlerts, 30000);
+</script>
+
+<!-- 移动端底部导航 -->
+<div class="mobile-bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(26,31,46,0.95);backdrop-filter:blur(20px);border-top:1px solid #2a3142;display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom,0px));z-index:997;">
+  <a class="mobile-nav-item" href="./mobile.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🏠</span>首页</a>
+  <a class="mobile-nav-item" href="./A股实时看板.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">📊</span>看板</a>
+  <a class="mobile-nav-item" href="./智能选股器.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🎯</span>选股</a>
+  <a class="mobile-nav-item" href="./持仓管理.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">💼</span>持仓</a>
+  <a class="mobile-nav-item" href="./价格预警.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🔔</span>预警</a>
+</div>
+<script>
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+  var nav = document.querySelector('.mobile-bottom-nav');
+  if (nav) nav.style.display = 'flex';
+  document.body.style.paddingBottom = 'calc(70px + env(safe-area-inset-bottom,0px))';
+}
+</script>
+
+</body>
+</html>
