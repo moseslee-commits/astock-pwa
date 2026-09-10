@@ -133,7 +133,9 @@ tr:hover { background: rgba(99,102,241,0.05); }
 .toast.error { border-color: rgba(255,77,79,0.5); }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+.mobile-back-btn, .mobile-bottom-nav { display: none; }
 @media (max-width: 768px) {
+  .mobile-back-btn, .mobile-bottom-nav { display: flex !important; }
     .chart-row { grid-template-columns: 1fr; }
     .asset-main { flex-direction: column; align-items: flex-start; }
     .asset-total .value { font-size: 28px; }
@@ -207,7 +209,7 @@ tr:hover { background: rgba(99,102,241,0.05); }
             </thead>
             <tbody id="positionBody"></tbody>
         </table>
-        <div class="empty-state" id="positionEmpty" style="display:none">
+        <div class="empty-state" id="positionEmpty" >
             <div class="icon">📊</div>
             <div class="text">暂无持仓</div>
             <div class="hint">点击右上角"添加持仓"开始跟踪</div>
@@ -222,7 +224,7 @@ tr:hover { background: rgba(99,102,241,0.05); }
             </thead>
             <tbody id="tradeBody"></tbody>
         </table>
-        <div class="empty-state" id="tradeEmpty" style="display:none">
+        <div class="empty-state" id="tradeEmpty" >
             <div class="icon">📝</div>
             <div class="text">暂无交易记录</div>
         </div>

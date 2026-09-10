@@ -317,8 +317,13 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 .anomaly-row-mark.vol { background: var(--accent); }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
+/* 默认隐藏移动端元素 */
+.mobile-back-btn, .mobile-bottom-nav { display: none; }
+
 /* ========== 手机竖屏优化 ========== */
 @media (max-width: 768px) {
+  /* 显示移动端元素 */
+  .mobile-back-btn, .mobile-bottom-nav { display: flex !important; }
   /* 全局优化 */
   body { font-size: 14px; -webkit-tap-highlight-color: transparent; }
   .container { padding: 8px 10px; padding-bottom: 70px; }
@@ -401,6 +406,7 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   
   /* 移动端返回按钮 */
   .mobile-back-btn {
+    display: none;
     position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 10px;
     width: 40px; height: 40px; border-radius: 50%;
     background: rgba(26,31,46,0.95); backdrop-filter: blur(10px);
@@ -412,6 +418,7 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   
   /* 移动端底部导航 - 优化高度和触摸目标 */
   .mobile-bottom-nav {
+    display: none;
     position: fixed; bottom: 0; left: 0; right: 0;
     background: rgba(14,18,23,0.97); backdrop-filter: blur(20px);
     border-top: 1px solid var(--border);
@@ -802,9 +809,9 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 </head>
 <body>
 <!-- 移动端返回按钮 -->
-<div class="mobile-back-btn" onclick="history.back()" style="display:none">←</div>
+<div class="mobile-back-btn" onclick="history.back()">←</div>
 <!-- 移动端底部导航 -->
-<div class="mobile-bottom-nav" style="display:none">
+<div class="mobile-bottom-nav">
   <a class="mobile-nav-item" href="./mobile.html"><span class="icon">🏠</span>首页</a>
   <a class="mobile-nav-item active" href="./dashboard.html"><span class="icon">📊</span>看板</a>
   <a class="mobile-nav-item" href="./stock-picker.html"><span class="icon">🎯</span>选股</a>
@@ -812,11 +819,7 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   <a class="mobile-nav-item" href="./price-alert.html"><span class="icon">🔔</span>预警</a>
 </div>
 <script>
-// 移动端检测：显示返回按钮和底部导航
-if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-  document.querySelector('.mobile-back-btn').style.display = 'flex';
-  document.querySelector('.mobile-bottom-nav').style.display = 'flex';
-}
+// 移动端检测由CSS媒体查询控制，无需JS
 </script>
 <div class="header">
   <div>

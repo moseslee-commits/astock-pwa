@@ -135,7 +135,9 @@ body {
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
 
 /* 移动端适配 */
+.mobile-back-btn, .mobile-bottom-nav { display: none; }
 @media (max-width: 768px) {
+  .mobile-back-btn, .mobile-bottom-nav { display: flex !important; }
   .main-layout { flex-direction: column; gap: 12px; }
   .filter-panel {
     width: 100%; position: static; padding: 12px;

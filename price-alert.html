@@ -137,7 +137,9 @@ input:checked + .slider { background-color: var(--accent); }
 input:checked + .slider:before { transform: translateX(18px); }
 
 /* 手机竖屏优化 */
+.mobile-back-btn, .mobile-bottom-nav { display: none; }
 @media (max-width: 768px) {
+  .mobile-back-btn, .mobile-bottom-nav { display: flex !important; }
   body { font-size: 14px; -webkit-tap-highlight-color: transparent; }
   .container { padding: 12px; padding-bottom: 70px; }
   .header { position: sticky; top: 0; z-index: 100; background: rgba(14,18,23,0.95); backdrop-filter: blur(12px); padding: 12px 0; margin: -12px -12px 12px; padding-left: 12px; padding-right: 12px; border-bottom: 1px solid var(--border, #2a3142); }
@@ -214,7 +216,7 @@ input:checked + .slider:before { transform: translateX(18px); }
             </thead>
             <tbody id="alertBody"></tbody>
         </table>
-        <div class="empty-state" id="alertEmpty" style="display:none">
+        <div class="empty-state" id="alertEmpty" >
             <div class="icon">🔔</div>
             <div class="text">暂无预警</div>
             <div class="hint">点击右上角"添加预警"开始监控</div>
@@ -229,7 +231,7 @@ input:checked + .slider:before { transform: translateX(18px); }
             </thead>
             <tbody id="historyBody"></tbody>
         </table>
-        <div class="empty-state" id="historyEmpty" style="display:none">
+        <div class="empty-state" id="historyEmpty" >
             <div class="icon">📋</div>
             <div class="text">暂无触发记录</div>
         </div>
