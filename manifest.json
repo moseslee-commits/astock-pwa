@@ -45,21 +45,21 @@
       "name": "实时看板",
       "short_name": "看板",
       "description": "查看A股实时行情",
-      "url": "./A股实时看板.html",
+      "url": "./dashboard.html",
       "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "智能选股",
       "short_name": "选股",
       "description": "五维共振智能选股",
-      "url": "./智能选股器.html",
+      "url": "./stock-picker.html",
       "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "持仓管理",
       "short_name": "持仓",
       "description": "管理持仓和盈亏",
-      "url": "./持仓管理.html",
+      "url": "./portfolio.html",
       "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
