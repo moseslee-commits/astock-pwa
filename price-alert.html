@@ -135,6 +135,29 @@ tr:hover { background: rgba(99,102,241,0.05); }
 }
 input:checked + .slider { background-color: var(--accent); }
 input:checked + .slider:before { transform: translateX(18px); }
+
+/* 手机竖屏优化 */
+@media (max-width: 768px) {
+  body { font-size: 14px; -webkit-tap-highlight-color: transparent; }
+  .container { padding: 12px; padding-bottom: 70px; }
+  .header { position: sticky; top: 0; z-index: 100; background: rgba(14,18,23,0.95); backdrop-filter: blur(12px); padding: 12px 0; margin: -12px -12px 12px; padding-left: 12px; padding-right: 12px; border-bottom: 1px solid var(--border, #2a3142); }
+  .header h1 { font-size: 17px; }
+  .btn { min-height: 40px; font-size: 13px; padding: 8px 16px; }
+  input, select { font-size: 14px; min-height: 40px; }
+  .card { padding: 12px; margin-bottom: 10px; }
+  .mobile-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(14,18,23,0.97); backdrop-filter: blur(20px); border-top: 1px solid var(--border, #2a3142); display: flex; justify-content: space-around; padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px)); z-index: 997; }
+  .mobile-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; color: #8b95a7; text-decoration: none; font-size: 10px; font-weight: 600; min-width: 48px; min-height: 48px; justify-content: center; }
+  .mobile-nav-item .icon { font-size: 22px; }
+  .mobile-nav-item.active { color: #1677ff; }
+  .mobile-back-btn { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 10px; width: 40px; height: 40px; border-radius: 50%; background: rgba(26,31,46,0.95); backdrop-filter: blur(10px); border: 1px solid var(--border, #2a3142); color: var(--text, #e8eaed); display: flex; align-items: center; justify-content: center; font-size: 20px; z-index: 998; cursor: pointer; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+}
+@media (max-width: 480px) {
+  .container { padding: 10px; padding-bottom: 65px; }
+  .header h1 { font-size: 15px; }
+  .mobile-nav-item { min-width: 44px; min-height: 44px; }
+  .mobile-nav-item .icon { font-size: 20px; }
+}
+
 </style>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0e1217">
