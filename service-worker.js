@@ -1,14 +1,15 @@
 // A股智能选股系统 Service Worker
-const CACHE_NAME = 'astock-pwa-v1';
+const CACHE_NAME = 'astock-pwa-v2';
 const ASSETS_TO_CACHE = [
   './',
   './manifest.json',
   './mobile.html',
-  './A股实时看板.html',
-  './智能选股器.html',
-  './持仓管理.html',
-  './价格预警.html',
-  './选股历史回顾.html',
+  './dashboard.html',
+  './stock-picker.html',
+  './portfolio.html',
+  './price-alert.html',
+  './history.html',
+  './app.html',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
