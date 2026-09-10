@@ -361,7 +361,7 @@ async function loadIndices() {
                 const sign = pct > 0 ? '+' : '';
                 return `<div class="index-row">
                     <span class="index-name">${names[i] || item.f14}</span>
-                    <span class="index-value ${cls}">${item.f2.toFixed(2)}</span>
+                    <span class="index-value ${cls}">${(item.f2 / 100).toFixed(2)}</span>
                     <span class="index-pct ${cls}">${sign}${pct.toFixed(2)}%</span>
                 </div>`;
             }).join('');
