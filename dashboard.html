@@ -876,8 +876,10 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     <button class="copy-btn history-btn" onclick="saveCurrentSelection()">保存选股</button>
     <button class="copy-btn history-btn" onclick="showHistoryPanel()">历史记录</button>
     <button class="copy-btn history-btn" onclick="showBacktest()">策略回测</button>
-    <button class="copy-btn history-btn" onclick="exportCSV()">导出CSV</button>
+    <button class="copy-btn history-btn" onclick="showExportMenu()">导出数据</button>
     <button class="copy-btn history-btn" onclick="showStrategyPanel()">策略设置</button>
+    <button class="copy-btn history-btn" onclick="exportFavorites()" title="导出自选股">导出自选</button>
+    <button class="copy-btn history-btn" onclick="importFavorites()" title="导入自选股">导入自选</button>
     <button class="copy-btn compare-btn" id="compareBtn" onclick="showComparePanel()" style="display:none">对比 (<span id="compareCount">0</span>)</button>
   </div>
   <div class="compare-bar" id="compareBar" style="display:none">
@@ -4395,16 +4397,16 @@ function resetStrategyParams() {
 }
 
 // ============ Export CSV ============
-function exportCSV() {
+function exportCSV(format) {
+  format = format || 'csv';
   const rows = document.querySelectorAll('#stockBody tr.clickable');
   if (rows.length === 0) { alert('暂无数据可导出'); return; }
 
-  const headers = ['代码', '名称', '板块', '现价', '涨跌幅', '涨跌额', '综合评分', '满足条件', '成交量', '成交额', '换手率', '量比'];
-  const data = [headers.join(',')];
-
+  const exportData = [];
   rows.forEach(row => {
     const tds = row.querySelectorAll('td');
     if (tds.length < 7) return;
+    const secid = row.dataset.sec || '';
     const code = tds[0] ? tds[0].textContent.trim() : '';
     const name = tds[1] ? tds[1].textContent.replace('★', '').replace('☆', '').replace('+对比', '').replace('买入信号', '').trim() : '';
     const sector = tds[2] ? tds[2].textContent.trim() : '';
@@ -4413,26 +4415,58 @@ function exportCSV() {
     const price = tds[5] ? tds[5].textContent.trim() : '';
     const pct = tds[6] ? tds[6].textContent.trim() : '';
     const chg = tds[7] ? tds[7].textContent.trim() : '';
-    const open = tds[8] ? tds[8].textContent.trim() : '';
-    const high = tds[9] ? tds[9].textContent.trim() : '';
-    const low = tds[10] ? tds[10].textContent.trim() : '';
     const vol = tds[11] ? tds[11].textContent.trim() : '';
     const amt = tds[12] ? tds[12].textContent.trim() : '';
-    // 换手率和量比需要从实时数据获取，这里留空
-    data.push([code, name, sector, price, pct, chg, score, cond, vol, amt, '', ''].join(','));
+    // 从实时数据获取换手率和量比
+    let turnover = '', volRatio = '';
+    if (lastRealtime) {
+      const rt = lastRealtime.find(d => (d.f13 + '.' + d.f12) === secid);
+      if (rt) {
+        turnover = rt.f8 ? rt.f8.toFixed(2) + '%' : '';
+        volRatio = rt.f10 ? rt.f10.toFixed(2) : '';
+      }
+    }
+    exportData.push({code, name, sector, price, pct, chg, score, cond, vol, amt, turnover, volRatio});
   });
 
   const now = new Date();
-  const filename = 'A股选股_' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + '.csv';
+  const timestamp = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
 
-  // 添加BOM以支持Excel中文
-  const csvContent = '\uFEFF' + data.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  if (format === 'json') {
+    const jsonContent = JSON.stringify({
+      exportTime: now.toISOString(),
+      stockCount: exportData.length,
+      stocks: exportData
+    }, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'A股选股_' + timestamp + '.json';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  } else {
+    const headers = ['代码', '名称', '板块', '现价', '涨跌幅', '涨跌额', '综合评分', '满足条件', '成交量', '成交额', '换手率', '量比'];
+    const data = [headers.join(',')];
+    exportData.forEach(d => {
+      data.push([d.code, d.name, d.sector, d.price, d.pct, d.chg, d.score, d.cond, d.vol, d.amt, d.turnover, d.volRatio].join(','));
+    });
+    const csvContent = '\uFEFF' + data.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'A股选股_' + timestamp + '.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+}
+
+function showExportMenu() {
+  const choice = confirm('导出数据\n\n点击"确定"导出CSV格式\n点击"取消"导出JSON格式');
+  if (choice) {
+    exportCSV('csv');
+  } else {
+    exportCSV('json');
+  }
 }
 
 // ============ Stock Compare ============
@@ -4619,6 +4653,56 @@ function toggleFavorite(secid, event) {
   }
   localStorage.setItem(FAV_KEY, JSON.stringify(favorites));
   if (lastRealtime) renderData(lastRealtime);
+}
+
+// 导出自选股
+function exportFavorites() {
+  if (favorites.length === 0) { alert('暂无自选股可导出'); return; }
+  const data = {
+    exportTime: new Date().toISOString(),
+    version: '1.0',
+    count: favorites.length,
+    favorites: favorites
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = '自选股_' + new Date().toISOString().slice(0,10) + '.json';
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+// 导入自选股
+function importFavorites() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const data = JSON.parse(ev.target.result);
+        const imported = data.favorites || data;
+        if (!Array.isArray(imported)) { alert('文件格式错误'); return; }
+        let added = 0;
+        imported.forEach(item => {
+          if (item.secid && !favorites.find(f => f.secid === item.secid)) {
+            favorites.push(item);
+            added++;
+          }
+        });
+        localStorage.setItem(FAV_KEY, JSON.stringify(favorites));
+        if (lastRealtime) renderData(lastRealtime);
+        alert('导入成功！新增 ' + added + ' 只自选股，当前共 ' + favorites.length + ' 只');
+      } catch(err) {
+        alert('导入失败：' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
 function isFavorite(secid) {

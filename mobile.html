@@ -215,27 +215,27 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
     <!-- 核心功能 -->
     <div class="section-title">核心功能</div>
     <div class="grid">
-        <div class="feature-card" onclick="openPage('dashboard.html')">
+        <div class="feature-card" onclick="openPage('A股实时看板.html')">
             <div class="feature-icon" style="background:rgba(99,102,241,0.15)">📊</div>
             <div class="feature-name">实时看板</div>
             <div class="feature-desc">81只龙头股实时行情、五维评分</div>
         </div>
-        <div class="feature-card" onclick="openPage('stock-picker.html')">
+        <div class="feature-card" onclick="openPage('智能选股器.html')">
             <div class="feature-icon" style="background:rgba(82,196,26,0.15)">🎯</div>
             <div class="feature-name">智能选股</div>
             <div class="feature-desc">五维共振多条件筛选选股</div>
         </div>
-        <div class="feature-card" onclick="openPage('portfolio.html')">
+        <div class="feature-card" onclick="openPage('持仓管理.html')">
             <div class="feature-icon" style="background:rgba(250,173,20,0.15)">💼</div>
             <div class="feature-name">持仓管理</div>
             <div class="feature-desc">持仓盈亏、资产分布、交易记录</div>
         </div>
-        <div class="feature-card" onclick="openPage('price-alert.html')">
+        <div class="feature-card" onclick="openPage('价格预警.html')">
             <div class="feature-icon" style="background:rgba(255,77,79,0.15)">🔔</div>
             <div class="feature-name">价格预警</div>
             <div class="feature-desc">突破/跌破预警，实时提醒</div>
         </div>
-        <div class="feature-card" onclick="openPage('history.html')">
+        <div class="feature-card" onclick="openPage('选股历史回顾.html')">
             <div class="feature-icon" style="background:rgba(139,92,246,0.15)">📋</div>
             <div class="feature-name">选股历史</div>
             <div class="feature-desc">历史选股记录回溯与统计</div>
@@ -263,16 +263,16 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
     <a class="nav-item active" href="./mobile.html">
         <span class="icon">🏠</span><span class="label">首页</span>
     </a>
-    <a class="nav-item" href="./dashboard.html">
+    <a class="nav-item" href="./A股实时看板.html">
         <span class="icon">📊</span><span class="label">看板</span>
     </a>
-    <a class="nav-item" href="./stock-picker.html">
+    <a class="nav-item" href="./智能选股器.html">
         <span class="icon">🎯</span><span class="label">选股</span>
     </a>
-    <a class="nav-item" href="./portfolio.html">
+    <a class="nav-item" href="./持仓管理.html">
         <span class="icon">💼</span><span class="label">持仓</span>
     </a>
-    <a class="nav-item" href="./price-alert.html">
+    <a class="nav-item" href="./价格预警.html">
         <span class="icon">🔔</span><span class="label">预警</span>
     </a>
 </div>
@@ -361,7 +361,7 @@ async function loadIndices() {
                 const sign = pct > 0 ? '+' : '';
                 return `<div class="index-row">
                     <span class="index-name">${names[i] || item.f14}</span>
-                    <span class="index-value ${cls}">${(item.f2 / 100).toFixed(2)}</span>
+                    <span class="index-value ${cls}">${(item.f2/100).toFixed(2)}</span>
                     <span class="index-pct ${cls}">${sign}${pct.toFixed(2)}%</span>
                 </div>`;
             }).join('');
