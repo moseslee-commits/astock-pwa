@@ -317,149 +317,62 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 .anomaly-row-mark.vol { background: var(--accent); }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-/* 默认隐藏移动端元素 */
-.mobile-back-btn, .mobile-bottom-nav { display: none; }
-
-/* ========== 手机竖屏优化 ========== */
 @media (max-width: 768px) {
-  /* 显示移动端元素 */
-  .mobile-back-btn, .mobile-bottom-nav { display: flex !important; }
-  /* 全局优化 */
-  body { font-size: 14px; -webkit-tap-highlight-color: transparent; }
-  .container { padding: 8px 10px; padding-bottom: 70px; }
-  
-  /* 顶部标题栏 - 固定顶部 */
-  .header {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(14,18,23,0.95); backdrop-filter: blur(12px);
-    padding: 10px 0 8px; margin: -8px -10px 10px; padding-left: 10px; padding-right: 10px;
-    border-bottom: 1px solid var(--border);
-  }
-  .header h1 { font-size: 17px; margin: 0; }
-  .header-sub { font-size: 11px; }
-  .search-box { width: 100%; margin: 8px 0 0; }
-  .search-box input { font-size: 14px; padding: 9px 12px; }
-  .header-controls { flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .header-controls .btn { font-size: 12px; padding: 7px 12px; min-height: 36px; }
-  
-  /* 指数卡片 - 3列紧凑布局 */
-  .index-cards { grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
-  .index-card { padding: 10px 6px; text-align: center; }
-  .index-card .name { font-size: 11px; margin-bottom: 4px; }
-  .index-card .price { font-size: 15px; font-weight: 700; }
-  .index-card .pct { font-size: 11px; margin-top: 2px; }
-  
-  /* 大盘环境面板 */
-  .market-env-panel { padding: 10px; margin-bottom: 10px; }
-  .env-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
-  .env-item { padding: 8px; }
-  .env-label { font-size: 10px; }
-  .env-value { font-size: 14px; }
-  
-  /* 板块资金流向 */
-  .capital-flow-panel { padding: 10px; margin-bottom: 10px; }
-  .flow-item { padding: 6px 0; }
-  .flow-name { font-size: 12px; }
-  .flow-value { font-size: 12px; }
-  
-  /* 快捷筛选 */
-  .quick-filter { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 6px; padding-bottom: 4px; margin-bottom: 8px; }
-  .quick-filter-tag { white-space: nowrap; font-size: 12px; padding: 7px 12px; min-height: 34px; }
-  
-  /* 板块筛选 - 横向滚动 */
-  .sector-filter { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; gap: 6px; padding-bottom: 6px; margin-bottom: 8px; }
-  .sector-tag { white-space: nowrap; font-size: 12px; padding: 7px 12px; min-height: 34px; }
-  
-  /* 股票表格 - 优化触摸体验 */
-  .stock-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
-  .stock-table { font-size: 12px; border-collapse: separate; border-spacing: 0; }
-  .stock-table th {
-    padding: 8px 6px; font-size: 11px; font-weight: 600;
-    background: var(--bg-sec); position: sticky; top: 0; z-index: 10;
-  }
-  .stock-table td { padding: 10px 6px; border-bottom: 1px solid var(--border); }
-  .stock-table tr { cursor: pointer; transition: background 0.15s; }
-  .stock-table tr:active { background: rgba(22,119,255,0.08); }
+  .index-cards { grid-template-columns: repeat(2, 1fr); }
+  .container { padding: 10px 12px; padding-bottom: 80px; }
+  .stock-table { font-size: 11px; }
+  .stock-table th, .stock-table td { padding: 5px 6px; }
   .hide-mobile { display: none; }
-  
-  /* 股票名称列优化 */
-  .stock-table .stock-name { font-size: 13px; font-weight: 600; max-width: 80px; }
-  .stock-table .stock-code { font-size: 10px; }
-  
-  /* 五维评分进度条优化 */
-  .score-bar { height: 6px; border-radius: 3px; }
-  .score-text { font-size: 11px; font-weight: 600; }
-  
-  /* 板块标签 */
-  .sector { font-size: 10px; padding: 2px 6px; }
-  
-  /* 异动面板 */
-  .anomaly-panel { font-size: 12px; padding: 10px; }
-  .anomaly-item { padding: 8px 0; }
-  
-  /* 板块排行 */
-  .sector-rank-panel { padding: 10px; margin-bottom: 10px; }
-  .rank-item { padding: 6px 0; }
-  
-  /* 章节标题 */
-  .section-title { font-size: 14px; font-weight: 700; margin: 14px 0 8px; padding-left: 8px; border-left: 3px solid var(--accent); }
-  
+  .section-title { font-size: 13px; }
+  .header h1 { font-size: 18px; }
+  .quick-filter { flex-wrap: wrap; gap: 6px; }
+  .quick-filter-tag { font-size: 11px; padding: 5px 10px; }
+  .sector-filter { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; padding-bottom: 4px; }
+  .sector-tag { white-space: nowrap; font-size: 11px; padding: 4px 10px; }
+  .stock-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .anomaly-panel { font-size: 11px; }
+  .env-grid { grid-template-columns: repeat(2, 1fr); }
+  .market-env-panel { padding: 12px; }
+  .sector-rank-panel { margin-bottom: 12px; }
+  .capital-flow-panel { margin-bottom: 12px; }
   /* 移动端返回按钮 */
   .mobile-back-btn {
-    display: none;
-    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 10px;
-    width: 40px; height: 40px; border-radius: 50%;
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 12px;
+    width: 38px; height: 38px; border-radius: 50%;
     background: rgba(26,31,46,0.95); backdrop-filter: blur(10px);
     border: 1px solid var(--border); color: var(--text);
     display: flex; align-items: center; justify-content: center;
-    font-size: 20px; z-index: 998; cursor: pointer;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    font-size: 18px; z-index: 998; cursor: pointer;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
   }
-  
-  /* 移动端底部导航 - 优化高度和触摸目标 */
+  /* 移动端底部导航 */
   .mobile-bottom-nav {
-    display: none;
     position: fixed; bottom: 0; left: 0; right: 0;
-    background: rgba(14,18,23,0.97); backdrop-filter: blur(20px);
+    background: rgba(26,31,46,0.95); backdrop-filter: blur(20px);
     border-top: 1px solid var(--border);
     display: flex; justify-content: space-around;
-    padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px));
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
     z-index: 997;
   }
   .mobile-nav-item {
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-    padding: 6px 10px; color: var(--text-sec); text-decoration: none;
-    font-size: 10px; font-weight: 600; min-width: 48px; min-height: 48px;
-    justify-content: center; transition: color 0.2s;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 4px 12px; color: var(--text-sec); text-decoration: none;
+    font-size: 10px; font-weight: 600;
   }
-  .mobile-nav-item .icon { font-size: 22px; }
-  .mobile-nav-item.active { color: var(--accent); }
-  .mobile-nav-item:active { opacity: 0.7; }
-  
-  /* 微信悬浮按钮位置调整 */
-  .wechat-float-btn { bottom: 75px; right: 12px; padding: 8px 14px; font-size: 12px; }
-}
-
-/* 小屏手机优化 (iPhone SE等) */
-@media (max-width: 480px) {
-  .container { padding: 6px 8px; padding-bottom: 65px; }
-  .header h1 { font-size: 15px; }
-  .index-cards { gap: 4px; }
-  .index-card { padding: 8px 4px; }
-  .index-card .price { font-size: 13px; }
-  .stock-table { font-size: 11px; }
-  .stock-table th, .stock-table td { padding: 8px 4px; }
-  .stock-table .stock-name { font-size: 12px; max-width: 70px; }
-  .quick-filter-tag, .sector-tag { font-size: 11px; padding: 6px 10px; }
-  .mobile-nav-item { padding: 4px 8px; min-width: 44px; min-height: 44px; }
   .mobile-nav-item .icon { font-size: 20px; }
+  .mobile-nav-item.active { color: var(--accent); }
 }
 
-/* 横屏优化 */
-@media (max-height: 500px) and (orientation: landscape) {
-  .mobile-bottom-nav { padding: 4px 0; }
-  .mobile-nav-item { min-height: 40px; }
-  .container { padding-bottom: 55px; }
+@media (max-width: 480px) {
+  .stock-table { font-size: 10px; }
+  .stock-table th, .stock-table td { padding: 4px 4px; }
+  .index-card { padding: 10px 8px; }
+  .index-card .name { font-size: 11px; }
+  .index-card .price { font-size: 14px; }
+  .header { padding: 12px 0; }
+  .header h1 { font-size: 16px; }
+  .search-box { width: 100%; margin-bottom: 8px; }
+  .header-controls { flex-wrap: wrap; gap: 8px; }
 }
 
 /* Stock Detail Modal */
@@ -809,17 +722,21 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 </head>
 <body>
 <!-- 移动端返回按钮 -->
-<div class="mobile-back-btn" onclick="history.back()">←</div>
+<div class="mobile-back-btn" onclick="history.back()" style="display:none">←</div>
 <!-- 移动端底部导航 -->
-<div class="mobile-bottom-nav">
+<div class="mobile-bottom-nav" style="display:none">
   <a class="mobile-nav-item" href="./mobile.html"><span class="icon">🏠</span>首页</a>
-  <a class="mobile-nav-item active" href="./dashboard.html"><span class="icon">📊</span>看板</a>
-  <a class="mobile-nav-item" href="./stock-picker.html"><span class="icon">🎯</span>选股</a>
-  <a class="mobile-nav-item" href="./portfolio.html"><span class="icon">💼</span>持仓</a>
-  <a class="mobile-nav-item" href="./price-alert.html"><span class="icon">🔔</span>预警</a>
+  <a class="mobile-nav-item active" href="./A股实时看板.html"><span class="icon">📊</span>看板</a>
+  <a class="mobile-nav-item" href="./智能选股器.html"><span class="icon">🎯</span>选股</a>
+  <a class="mobile-nav-item" href="./持仓管理.html"><span class="icon">💼</span>持仓</a>
+  <a class="mobile-nav-item" href="./价格预警.html"><span class="icon">🔔</span>预警</a>
 </div>
 <script>
-// 移动端检测由CSS媒体查询控制，无需JS
+// 移动端检测：显示返回按钮和底部导航
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+  document.querySelector('.mobile-back-btn').style.display = 'flex';
+  document.querySelector('.mobile-bottom-nav').style.display = 'flex';
+}
 </script>
 <div class="header">
   <div>
@@ -1944,13 +1861,28 @@ async function fetchKlineHK(hkCode, usSecid) {
 }
 
 async function fetchAllKlines() {
-  const aShareTasks = watchlist.map(s => fetchKline(s.secid).catch(() => {}));
-  const cnTasks = cnStocks
-    .filter(s => CN_HK_MAPPING[s.code])
-    .map(s => fetchKlineHK(CN_HK_MAPPING[s.code], s.secid).catch(() => {}));
-  // Also fetch index K-lines for market environment judgment
-  const indexTasks = indexList.map(i => fetchKline(i.secid).catch(() => {}));
-  await Promise.all([...aShareTasks, ...cnTasks, ...indexTasks]);
+  // 分批加载K线数据，每批5个，避免被API限流
+  const BATCH_SIZE = 5;
+  const allSecids = [
+    ...watchlist.map(s => ({secid: s.secid, type: 'a'})),
+    ...cnStocks.filter(s => CN_HK_MAPPING[s.code]).map(s => ({secid: s.secid, hkCode: CN_HK_MAPPING[s.code], type: 'hk'})),
+    ...indexList.map(i => ({secid: i.secid, type: 'a'}))
+  ];
+
+  for (let i = 0; i < allSecids.length; i += BATCH_SIZE) {
+    const batch = allSecids.slice(i, i + BATCH_SIZE);
+    const tasks = batch.map(item => {
+      if (item.type === 'hk') {
+        return fetchKlineHK(item.hkCode, item.secid).catch(() => {});
+      }
+      return fetchKline(item.secid).catch(() => {});
+    });
+    await Promise.all(tasks);
+    // 每批之间短暂延迟
+    if (i + BATCH_SIZE < allSecids.length) {
+      await new Promise(r => setTimeout(r, 200));
+    }
+  }
   if (lastRealtime) renderData(lastRealtime);
 }
 
