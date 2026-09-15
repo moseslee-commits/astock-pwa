@@ -3407,6 +3407,29 @@ document.getElementById('stockModal').addEventListener('click', function(e) {
   if (e.target === this) closeStockDetail();
 });
 
+// ========== 图表响应式重绘 ==========
+let resizeTimer = null;
+let currentKlineData = null;
+window.addEventListener('resize', function() {
+  if (resizeTimer) clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function() {
+    if (!currentStock) return;
+    const modal = document.getElementById('stockModal');
+    if (getComputedStyle(modal).display !== 'block') return;
+    if (currentTab === 'minute') {
+      const cache = minuteDataCache[currentStock.secid];
+      if (cache && cache.points) {
+        drawMinuteChart(cache.points, cache.prevClose);
+      }
+    } else if (currentTab === 'kline' && currentKlineData) {
+      drawKlineChart(currentKlineData);
+      if (typeof drawKlineIndicators === 'function') {
+        drawKlineIndicators(currentKlineData);
+      }
+    }
+  }, 200);
+});
+
 // ========== 弹窗拖动功能 ==========
 (function() {
   const modal = document.querySelector('.stock-modal');
@@ -3762,6 +3785,7 @@ async function loadKlineChart(stock, period) {
       // 转回字符串数组格式
       const show = parsed.map(k => [k.date, k.open, k.close, k.high, k.low, k.volume, '0']);
       if (show.length > 0) {
+        currentKlineData = show;
         drawKlineChart(show);
         const last = show[show.length - 1];
         const prev = show.length > 1 ? show[show.length - 2] : last;
