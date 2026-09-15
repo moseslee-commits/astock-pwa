@@ -135,31 +135,6 @@ tr:hover { background: rgba(99,102,241,0.05); }
 }
 input:checked + .slider { background-color: var(--accent); }
 input:checked + .slider:before { transform: translateX(18px); }
-
-/* 手机竖屏优化 */
-.mobile-back-btn, .mobile-bottom-nav { display: none; }
-@media (max-width: 768px) {
-  .mobile-back-btn, .mobile-bottom-nav { display: flex !important; }
-  body { font-size: 14px; -webkit-tap-highlight-color: transparent; }
-  .container { padding: 12px; padding-bottom: 70px; }
-  .header { position: sticky; top: 0; z-index: 100; background: rgba(14,18,23,0.95); backdrop-filter: blur(12px); padding: 12px 0; margin: -12px -12px 12px; padding-left: 12px; padding-right: 12px; border-bottom: 1px solid var(--border, #2a3142); }
-  .header h1 { font-size: 17px; }
-  .btn { min-height: 40px; font-size: 13px; padding: 8px 16px; }
-  input, select { font-size: 14px; min-height: 40px; }
-  .card { padding: 12px; margin-bottom: 10px; }
-  .mobile-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(14,18,23,0.97); backdrop-filter: blur(20px); border-top: 1px solid var(--border, #2a3142); display: flex; justify-content: space-around; padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px)); z-index: 997; }
-  .mobile-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; color: #8b95a7; text-decoration: none; font-size: 10px; font-weight: 600; min-width: 48px; min-height: 48px; justify-content: center; }
-  .mobile-nav-item .icon { font-size: 22px; }
-  .mobile-nav-item.active { color: #1677ff; }
-  .mobile-back-btn { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 10px; width: 40px; height: 40px; border-radius: 50%; background: rgba(26,31,46,0.95); backdrop-filter: blur(10px); border: 1px solid var(--border, #2a3142); color: var(--text, #e8eaed); display: flex; align-items: center; justify-content: center; font-size: 20px; z-index: 998; cursor: pointer; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
-}
-@media (max-width: 480px) {
-  .container { padding: 10px; padding-bottom: 65px; }
-  .header h1 { font-size: 15px; }
-  .mobile-nav-item { min-width: 44px; min-height: 44px; }
-  .mobile-nav-item .icon { font-size: 20px; }
-}
-
 </style>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0e1217">
@@ -177,6 +152,7 @@ input:checked + .slider:before { transform: translateX(18px); }
         </div>
         <div class="header-right">
             <span id="updateTime" style="font-size:12px;color:var(--text-sec)">监控中...</span>
+            <button class="btn" onclick="requestNotifyPermission()">🔔 开启通知</button>
             <button class="btn" onclick="checkAlerts()">🔄 立即检查</button>
             <button class="btn btn-primary" onclick="openAddModal()">➕ 添加预警</button>
         </div>
@@ -216,7 +192,7 @@ input:checked + .slider:before { transform: translateX(18px); }
             </thead>
             <tbody id="alertBody"></tbody>
         </table>
-        <div class="empty-state" id="alertEmpty" >
+        <div class="empty-state" id="alertEmpty" style="display:none">
             <div class="icon">🔔</div>
             <div class="text">暂无预警</div>
             <div class="hint">点击右上角"添加预警"开始监控</div>
@@ -231,7 +207,7 @@ input:checked + .slider:before { transform: translateX(18px); }
             </thead>
             <tbody id="historyBody"></tbody>
         </table>
-        <div class="empty-state" id="historyEmpty" >
+        <div class="empty-state" id="historyEmpty" style="display:none">
             <div class="icon">📋</div>
             <div class="text">暂无触发记录</div>
         </div>
@@ -288,6 +264,42 @@ function loadData() {
 function saveData() {
     localStorage.setItem(ALERT_KEY, JSON.stringify(alerts));
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+// 系统通知功能
+let notificationsEnabled = false;
+
+function initNotifications() {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        notificationsEnabled = true;
+    }
+}
+
+function requestNotifyPermission() {
+    if (!('Notification' in window)) {
+        showToast('当前浏览器不支持系统通知', 'error');
+        return;
+    }
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = true;
+        showToast('系统通知已开启');
+        return;
+    }
+    Notification.requestPermission().then(p => {
+        if (p === 'granted') {
+            notificationsEnabled = true;
+            showToast('系统通知已开启');
+        }
+    });
+}
+
+function sendNotification(title, body) {
+    if (!notificationsEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+        const n = new Notification(title, { body: body, tag: 'price-alert-' + Date.now() });
+        n.onclick = () => { window.focus(); n.close(); };
+        setTimeout(() => n.close(), 8000);
+    } catch(e) { console.warn('通知失败:', e); }
 }
 
 function showToast(msg, type='success') {
@@ -398,6 +410,7 @@ async function checkAlerts() {
             });
             const typeText = alert.type === 'up' ? '突破' : '跌破';
             showToast(`🔔 ${alert.name}(${alert.code}) ${typeText}目标价 ${alert.targetPrice}，现价 ${currentPrice}`, 'warn');
+            sendNotification('价格预警触发', `${alert.name}(${alert.code}) ${typeText}目标价 ${alert.targetPrice}，现价 ${currentPrice}`);
         }
     });
 
@@ -495,10 +508,10 @@ setInterval(checkAlerts, 30000);
 <!-- 移动端底部导航 -->
 <div class="mobile-bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(26,31,46,0.95);backdrop-filter:blur(20px);border-top:1px solid #2a3142;display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom,0px));z-index:997;">
   <a class="mobile-nav-item" href="./mobile.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🏠</span>首页</a>
-  <a class="mobile-nav-item" href="./dashboard.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">📊</span>看板</a>
-  <a class="mobile-nav-item" href="./stock-picker.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🎯</span>选股</a>
-  <a class="mobile-nav-item" href="./portfolio.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">💼</span>持仓</a>
-  <a class="mobile-nav-item" href="./price-alert.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🔔</span>预警</a>
+  <a class="mobile-nav-item" href="./A股实时看板.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">📊</span>看板</a>
+  <a class="mobile-nav-item" href="./智能选股器.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🎯</span>选股</a>
+  <a class="mobile-nav-item" href="./持仓管理.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">💼</span>持仓</a>
+  <a class="mobile-nav-item" href="./价格预警.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🔔</span>预警</a>
 </div>
 <script>
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {

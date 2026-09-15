@@ -878,6 +878,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     <button class="copy-btn history-btn" onclick="showBacktest()">策略回测</button>
     <button class="copy-btn history-btn" onclick="showExportMenu()">导出数据</button>
     <button class="copy-btn history-btn" onclick="showStrategyPanel()">策略设置</button>
+    <button class="copy-btn history-btn" id="notifyBtn" onclick="toggleNotifications()" title="开启系统通知">🔔 通知</button>
     <button class="copy-btn history-btn" onclick="exportFavorites()" title="导出自选股">导出自选</button>
     <button class="copy-btn history-btn" onclick="importFavorites()" title="导入自选股">导入自选</button>
     <button class="copy-btn compare-btn" id="compareBtn" onclick="showComparePanel()" style="display:none">对比 (<span id="compareCount">0</span>)</button>
@@ -4467,6 +4468,85 @@ function showExportMenu() {
   } else {
     exportCSV('json');
   }
+}
+
+// ============ 系统通知功能 ============
+let notificationsEnabled = false;
+
+function requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    alert('当前浏览器不支持系统通知');
+    return false;
+  }
+  if (Notification.permission === 'granted') {
+    notificationsEnabled = true;
+    updateNotifyButton();
+    return true;
+  }
+  if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        notificationsEnabled = true;
+        updateNotifyButton();
+        showToast('系统通知已开启');
+      }
+    });
+  }
+  return notificationsEnabled;
+}
+
+function toggleNotifications() {
+  if (notificationsEnabled) {
+    notificationsEnabled = false;
+    updateNotifyButton();
+    showToast('系统通知已关闭');
+  } else {
+    requestNotificationPermission();
+  }
+}
+
+function updateNotifyButton() {
+  const btn = document.getElementById('notifyBtn');
+  if (btn) {
+    if (notificationsEnabled) {
+      btn.textContent = '🔔 通知开';
+      btn.style.background = 'rgba(82, 196, 26, 0.2)';
+      btn.style.color = '#52c41a';
+    } else {
+      btn.textContent = '🔔 通知';
+      btn.style.background = '';
+      btn.style.color = '';
+    }
+  }
+}
+
+function sendNotification(title, body, icon = '') {
+  if (!notificationsEnabled || !('Notification' in window) || Notification.permission !== 'granted') {
+    return;
+  }
+  try {
+    const notification = new Notification(title, {
+      body: body,
+      icon: icon || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📈</text></svg>',
+      badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📈</text></svg>',
+      tag: 'astock-' + Date.now(),
+      requireInteraction: false
+    });
+    notification.onclick = function() {
+      window.focus();
+      notification.close();
+    };
+    // 5秒后自动关闭
+    setTimeout(() => notification.close(), 5000);
+  } catch(e) {
+    console.warn('通知发送失败:', e);
+  }
+}
+
+// 检查页面加载时的通知权限
+if ('Notification' in window && Notification.permission === 'granted') {
+  notificationsEnabled = true;
+  setTimeout(updateNotifyButton, 1000);
 }
 
 // ============ Stock Compare ============
