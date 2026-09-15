@@ -209,6 +209,7 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
     <div class="stats-row">
         <div class="stat-mini"><div class="val" id="favCount">0</div><div class="lbl">自选股</div></div>
         <div class="stat-mini"><div class="val" id="posCount">0</div><div class="lbl">持仓数</div></div>
+        <div class="stat-mini" onclick="toggleMobileNotify()" style="cursor:pointer"><div class="val" id="notifyStatus">🔔</div><div class="lbl" id="notifyLabel">开启通知</div></div>
         <div class="stat-mini"><div class="val" id="alertCount">0</div><div class="lbl">预警中</div></div>
     </div>
 
@@ -409,6 +410,73 @@ updateMarketStatus();
 loadLocalStats();
 setInterval(loadIndices, 30000);
 setInterval(updateMarketStatus, 60000);
+
+    // 移动端通知功能
+    let mobileNotifyEnabled = false;
+    
+    function toggleMobileNotify() {
+        if (!('Notification' in window)) {
+            alert('当前浏览器不支持系统通知');
+            return;
+        }
+        if (mobileNotifyEnabled) {
+            mobileNotifyEnabled = false;
+            updateNotifyUI();
+            return;
+        }
+        if (Notification.permission === 'granted') {
+            mobileNotifyEnabled = true;
+            updateNotifyUI();
+            startAlertMonitor();
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(p => {
+                if (p === 'granted') {
+                    mobileNotifyEnabled = true;
+                    updateNotifyUI();
+                    startAlertMonitor();
+                }
+            });
+        }
+    }
+    
+    function updateNotifyUI() {
+        const status = document.getElementById('notifyStatus');
+        const label = document.getElementById('notifyLabel');
+        if (status) status.textContent = mobileNotifyEnabled ? '🔔' : '🔕';
+        if (label) label.textContent = mobileNotifyEnabled ? '通知已开' : '开启通知';
+    }
+    
+    function sendMobileNotify(title, body) {
+        if (!mobileNotifyEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+        try {
+            const n = new Notification(title, { body: body, tag: 'mobile-alert-' + Date.now() });
+            n.onclick = () => { window.focus(); n.close(); };
+            setTimeout(() => n.close(), 8000);
+        } catch(e) {}
+    }
+    
+    let alertMonitorTimer = null;
+    function startAlertMonitor() {
+        if (alertMonitorTimer) return;
+        alertMonitorTimer = setInterval(() => {
+            if (!mobileNotifyEnabled) return;
+            const alerts = JSON.parse(localStorage.getItem('astock_price_alerts') || '[]');
+            const activeAlerts = alerts.filter(a => a.enabled !== false && !a.triggered);
+            // 简化版：检查是否有预警接近触发（实际需要行情数据）
+            if (activeAlerts.length > 0) {
+                // 这里可以接入实时行情检查
+                // sendMobileNotify('价格预警监控', `正在监控${activeAlerts.length}个预警`);
+            }
+        }, 30000);
+    }
+    
+    // 页面加载时检查通知权限
+    if ('Notification' in window && Notification.permission === 'granted') {
+        mobileNotifyEnabled = true;
+        setTimeout(updateNotifyUI, 500);
+    }
+    
+
 
 // 监听其他页面的storage变化
 window.addEventListener('storage', (e) => {
