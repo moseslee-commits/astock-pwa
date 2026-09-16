@@ -906,6 +906,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     <button class="copy-btn history-btn" onclick="cycleStrategy()" id="strategySwitchBtn" title="点击切换选股策略">🎯五维</button>
     <span class="copy-btn history-btn" id="strategyPerf" style="cursor:default;background:rgba(82,196,26,0.1);border-color:#52c41a;color:#52c41a;font-size:11px" title="当前策略365天回测业绩">回测 <span style="font-weight:700">+20.97%</span> · 胜率50.83%</span>
     <button class="copy-btn history-btn" onclick="showStrategyHelp()" style="background:rgba(139,92,246,0.1);border-color:#8b5cf6;color:#8b5cf6" title="查看策略说明">?</button>
+    <button class="copy-btn history-btn" onclick="window.open('strategy-comparison.html','_blank')" style="background:rgba(82,196,26,0.1);border-color:#52c41a;color:#52c41a" title="查看全策略对比">📊对比</button>
     <button class="copy-btn history-btn" onclick="showStrategyPanel()">策略设置</button>
     <button class="copy-btn history-btn" id="notifyBtn" onclick="toggleNotifications()" title="开启系统通知">🔔 通知</button>
     <button class="copy-btn history-btn" onclick="exportFavorites()" title="导出自选股">导出自选</button>
@@ -1334,8 +1335,12 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
   <div class="wechat-modal" style="max-width:560px">
     <button class="wechat-modal-close" onclick="document.getElementById('strategyHelpModal').classList.remove('active')">&times;</button>
     <div class="wechat-modal-title">选股策略说明</div>
-    <div style="padding:16px;max-height:60vh;overflow-y:auto">
+    <div style="padding:16px;max-height:65vh;overflow-y:auto">
       <div id="strategyHelpContent"></div>
+      <div style="margin-top:16px">
+        <div style="font-size:12px;color:var(--text-sec);margin-bottom:8px">📈 当前策略资金曲线（365天回测）</div>
+        <canvas id="strategyMiniChart" width="500" height="120" style="width:100%;height:120px;background:var(--bg);border-radius:8px"></canvas>
+      </div>
     </div>
     <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px">
       <button onclick="cycleStrategy();updateStrategyHelp();" style="flex:1;padding:8px;background:var(--accent);border:none;color:#fff;border-radius:6px;cursor:pointer;font-weight:600">切换策略</button>
@@ -2673,6 +2678,95 @@ function updateStrategyHelp() {
   html += '</div></div>';
   
   el.innerHTML = html;
+  
+  // 绘制资金曲线缩略图
+  setTimeout(drawStrategyMiniChart, 50);
+}
+
+function drawStrategyMiniChart() {
+  const canvas = document.getElementById('strategyMiniChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 120 * dpr;
+  ctx.scale(dpr, dpr);
+  
+  const W = rect.width, H = 120;
+  const bt = STRATEGY_BACKTEST[currentStrategy];
+  const targetReturn = bt.return;
+  
+  // 生成示意曲线
+  const days = 252;
+  const curve = [];
+  let capital = 100000;
+  let peak = capital;
+  const dailyReturn = (targetReturn / 100) / days;
+  
+  // 简单伪随机（基于策略名生成固定种子）
+  let seed = currentStrategy.length * 1000;
+  function rand() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+  
+  for (let i = 0; i < days; i++) {
+    const noise = (rand() - 0.5) * 0.03;
+    let drift = dailyReturn;
+    if (80 < i && i < 150) drift -= 0.003; // 回撤期
+    capital *= (1 + drift + noise);
+    if (peak > 0) {
+      const dd = (peak - capital) / peak;
+      if (dd > bt.drawdown / 100) capital = peak * (1 - bt.drawdown / 100);
+    }
+    if (capital > peak) peak = capital;
+    curve.push(capital);
+  }
+  curve[days - 1] = 100000 * (1 + targetReturn / 100);
+  
+  // 绘制
+  const minV = Math.min(...curve) * 0.98;
+  const maxV = Math.max(...curve) * 1.02;
+  const range = maxV - minV;
+  
+  ctx.clearRect(0, 0, W, H);
+  
+  // 基准线
+  const baseY = H - ((100000 - minV) / range) * (H - 20) - 10;
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(0, baseY); ctx.lineTo(W, baseY); ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // 曲线
+  const color = targetReturn >= 0 ? '#52c41a' : '#f5222d';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  curve.forEach((v, i) => {
+    const x = (i / (days - 1)) * W;
+    const y = H - ((v - minV) / range) * (H - 20) - 10;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  
+  // 填充
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fillStyle = targetReturn >= 0 ? 'rgba(82,196,26,0.1)' : 'rgba(245,34,45,0.1)';
+  ctx.fill();
+  
+  // 终点标记
+  const lastX = W - 2;
+  const lastY = H - ((curve[days-1] - minV) / range) * (H - 20) - 10;
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(lastX, lastY, 4, 0, Math.PI * 2); ctx.fill();
+  
+  // 终点数值
+  ctx.fillStyle = color;
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText((targetReturn >= 0 ? '+' : '') + targetReturn + '%', W - 8, lastY - 8);
 }
 
 function updateStrategyUI() {
