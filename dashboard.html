@@ -1168,6 +1168,21 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         </div>
         <input type="range" id="riskWeight" min="0" max="100" value="10" style="width:100%" oninput="updateStrategyParams()">
       </div>
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span>最低评分筛选</span>
+          <span id="minScoreVal" style="color:var(--accent);font-weight:600">不限制</span>
+        </div>
+        <input type="range" id="minScore" min="0" max="90" value="0" step="5" style="width:100%" oninput="updateStrategyParams()">
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;color:var(--text-sec);margin-bottom:6px">快速预设</div>
+        <div style="display:flex;gap:6px">
+          <button onclick="applyPreset('conservative')" style="flex:1;padding:6px;background:none;border:1px solid var(--border);color:var(--text-sec);border-radius:4px;cursor:pointer;font-size:12px">保守型</button>
+          <button onclick="applyPreset('balanced')" style="flex:1;padding:6px;background:none;border:1px solid var(--border);color:var(--text-sec);border-radius:4px;cursor:pointer;font-size:12px">平衡型</button>
+          <button onclick="applyPreset('aggressive')" style="flex:1;padding:6px;background:none;border:1px solid var(--border);color:var(--text-sec);border-radius:4px;cursor:pointer;font-size:12px">激进型</button>
+        </div>
+      </div>
       <div id="weightWarning" style="color:#faad14;font-size:12px;margin-bottom:12px;display:none">权重之和不等于100%，评分将按比例归一化</div>
       <div style="display:flex;gap:8px">
         <button onclick="resetStrategyParams()" style="flex:1;padding:8px;background:none;border:1px solid var(--border);color:var(--text-sec);border-radius:6px;cursor:pointer">恢复默认</button>
@@ -2119,7 +2134,7 @@ function calcTimingScore(stock, rt, cond) {
 // 综合评分：质量30% + 聪明钱30% + 技术择时40%
 // 策略参数（可调节）
 const STRATEGY_KEY = 'astock_strategy_params';
-let strategyParams = { fundamentalWeight: 25, valuationWeight: 20, capitalWeight: 20, technicalWeight: 25, riskWeight: 10 };
+let strategyParams = { fundamentalWeight: 25, valuationWeight: 20, capitalWeight: 20, technicalWeight: 25, riskWeight: 10, minScore: 0 };
 try {
   const saved = JSON.parse(localStorage.getItem(STRATEGY_KEY));
   if (saved) strategyParams = Object.assign(strategyParams, saved);
@@ -4373,6 +4388,11 @@ function updateStrategyParams() {
   document.getElementById('capitalWeightVal').textContent = c + '%';
   document.getElementById('technicalWeightVal').textContent = t + '%';
   document.getElementById('riskWeightVal').textContent = r + '%';
+  const minScoreEl = document.getElementById('minScore');
+  if (minScoreEl) {
+    strategyParams.minScore = parseInt(minScoreEl.value);
+    document.getElementById('minScoreVal').textContent = strategyParams.minScore === 0 ? '不限制' : strategyParams.minScore + '分以上';
+  }
   const total = f + v + c + t + r;
   document.getElementById('weightWarning').style.display = total !== 100 ? 'block' : 'none';
 }
@@ -4386,6 +4406,24 @@ function applyStrategyParams() {
   localStorage.setItem(STRATEGY_KEY, JSON.stringify(strategyParams));
   document.getElementById('strategyModal').classList.remove('active');
   if (lastRealtime) renderData(lastRealtime);
+}
+
+function applyPreset(type) {
+  const presets = {
+    conservative: { fundamentalWeight: 35, valuationWeight: 25, capitalWeight: 15, technicalWeight: 15, riskWeight: 10, minScore: 60 },
+    balanced: { fundamentalWeight: 25, valuationWeight: 20, capitalWeight: 20, technicalWeight: 25, riskWeight: 10, minScore: 0 },
+    aggressive: { fundamentalWeight: 15, valuationWeight: 10, capitalWeight: 25, technicalWeight: 40, riskWeight: 10, minScore: 50 }
+  };
+  const p = presets[type];
+  if (!p) return;
+  Object.assign(strategyParams, p);
+  document.getElementById('fundamentalWeight').value = p.fundamentalWeight;
+  document.getElementById('valuationWeight').value = p.valuationWeight;
+  document.getElementById('capitalWeight').value = p.capitalWeight;
+  document.getElementById('technicalWeight').value = p.technicalWeight;
+  document.getElementById('riskWeight').value = p.riskWeight;
+  document.getElementById('minScore').value = p.minScore;
+  updateStrategyParams();
 }
 
 function resetStrategyParams() {
