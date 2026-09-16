@@ -903,6 +903,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     <button class="copy-btn history-btn" onclick="showBacktest()">策略回测</button>
     <button class="copy-btn history-btn" onclick="showExportMenu()">导出数据</button>
     <button class="copy-btn history-btn" onclick="toggleTrendFilter()" id="trendFilterBtn">📈趋势</button>
+    <button class="copy-btn history-btn" onclick="cycleStrategy()" id="strategySwitchBtn" title="切换选股策略">🎯五维</button>
     <button class="copy-btn history-btn" onclick="showStrategyPanel()">策略设置</button>
     <button class="copy-btn history-btn" id="notifyBtn" onclick="toggleNotifications()" title="开启系统通知">🔔 通知</button>
     <button class="copy-btn history-btn" onclick="exportFavorites()" title="导出自选股">导出自选</button>
@@ -1200,6 +1201,24 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
           <span id="minScoreVal" style="color:var(--accent);font-weight:600">不限制</span>
         </div>
         <input type="range" id="minScore" min="0" max="90" value="0" step="5" style="width:100%" oninput="updateStrategyParams()">
+      </div>
+      <div style="margin-bottom:14px;padding-top:10px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:8px">📈 趋势信号参数（回测最优: MA10/30）</div>
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span>短期MA</span>
+            <span id="shortMAVal" style="color:var(--accent);font-weight:600">10</span>
+          </div>
+          <input type="range" id="shortMA" min="3" max="20" value="10" step="1" style="width:100%" oninput="updateStrategyParams()">
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span>长期MA</span>
+            <span id="longMAVal" style="color:var(--accent);font-weight:600">30</span>
+          </div>
+          <input type="range" id="longMA" min="10" max="60" value="30" step="5" style="width:100%" oninput="updateStrategyParams()">
+        </div>
+        <div style="font-size:11px;color:var(--text-sec)">趋势信号=短期MA上穿/下穿长期MA</div>
       </div>
       <div style="margin-bottom:14px">
         <div style="font-size:12px;color:var(--text-sec);margin-bottom:6px">快速预设</div>
@@ -1943,39 +1962,40 @@ function getLimitUpRatio(code) {
 // 趋势跟踪信号检测：MA10/MA30金叉死叉（回测最优参数）
 // 同时计算MA5/MA20作为快速信号参考
 function checkTrendSignal(klines) {
-  if (!klines || klines.length < 31) return { signal: 'none', maShort: null, maLong: null, ma5: null, ma20: null, strength: 0, fastSignal: 'none' };
+  if (!klines || klines.length < 31) return { signal: 'none', strength: 0, fastSignal: 'none' };
   const closes = klines.map(k => k.close);
   const n = closes.length;
   
-  // 主信号：MA10/MA30（回测最优，收益+28.63%）
-  const maShort_now = closes.slice(n-10).reduce((a,b) => a+b, 0) / 10;
-  const maShort_prev = closes.slice(n-11, n-1).reduce((a,b) => a+b, 0) / 10;
-  const maLong_now = closes.slice(n-30).reduce((a,b) => a+b, 0) / 30;
-  const maLong_prev = closes.slice(n-31, n-1).reduce((a,b) => a+b, 0) / 30;
+  // 主信号：使用可调MA参数（默认MA10/MA30，回测最优）
+  const shortMA = strategyParams.shortMA || 10;
+  const longMA = strategyParams.longMA || 30;
+  if (n < longMA + 1) return { signal: 'none', strength: 0, fastSignal: 'none' };
+  
+  const maShort = closes.slice(-shortMA).reduce((a,b) => a+b, 0) / shortMA;
+  const maLong = closes.slice(-longMA).reduce((a,b) => a+b, 0) / longMA;
+  const prevMaShort = closes.slice(-shortMA-1, -1).reduce((a,b) => a+b, 0) / shortMA;
+  const prevMaLong = closes.slice(-longMA-1, -1).reduce((a,b) => a+b, 0) / longMA;
   
   let signal = 'none';
-  if (maShort_prev <= maLong_prev && maShort_now > maLong_now) signal = 'golden_cross';
-  else if (maShort_prev >= maLong_prev && maShort_now < maLong_now) signal = 'death_cross';
-  else if (maShort_now > maLong_now) signal = 'bullish';
-  else signal = 'bearish';
+  if (prevMaShort <= prevMaLong && maShort > maLong) signal = 'golden_cross';
+  else if (prevMaShort >= prevMaLong && maShort < maLong) signal = 'death_cross';
+  else if (maShort > maLong && maShort > prevMaShort) signal = 'bullish';
+  else if (maShort < maLong && maShort < prevMaShort) signal = 'bearish';
   
-  const strength = maLong_now > 0 ? (maShort_now / maLong_now - 1) * 100 : 0;
+  const strength = maLong > 0 ? ((maShort / maLong) - 1) * 100 : 0;
   
-  // 快速信号：MA5/MA20（更灵敏，用于辅助判断）
+  // 快速信号：MA5/MA20（固定，辅助参考）
   let fastSignal = 'none';
-  let ma5_now = null, ma20_now = null;
   if (n >= 21) {
-    ma5_now = closes.slice(n-5).reduce((a,b) => a+b, 0) / 5;
-    const ma5_prev = closes.slice(n-6, n-1).reduce((a,b) => a+b, 0) / 5;
-    ma20_now = closes.slice(n-20).reduce((a,b) => a+b, 0) / 20;
-    const ma20_prev = closes.slice(n-21, n-1).reduce((a,b) => a+b, 0) / 20;
-    if (ma5_prev <= ma20_prev && ma5_now > ma20_now) fastSignal = 'golden_cross';
-    else if (ma5_prev >= ma20_prev && ma5_now < ma20_now) fastSignal = 'death_cross';
-    else if (ma5_now > ma20_now) fastSignal = 'bullish';
-    else fastSignal = 'bearish';
+    const ma5 = closes.slice(-5).reduce((a,b) => a+b, 0) / 5;
+    const ma20 = closes.slice(-20).reduce((a,b) => a+b, 0) / 20;
+    const prevMa5 = closes.slice(-6, -1).reduce((a,b) => a+b, 0) / 5;
+    const prevMa20 = closes.slice(-21, -1).reduce((a,b) => a+b, 0) / 20;
+    if (prevMa5 <= prevMa20 && ma5 > ma20) fastSignal = 'golden_cross';
+    else if (prevMa5 >= prevMa20 && ma5 < ma20) fastSignal = 'death_cross';
   }
   
-  return { signal, maShort: maShort_now, maLong: maLong_now, ma5: ma5_now, ma20: ma20_now, strength, fastSignal };
+  return { signal, strength, fastSignal };
 }
 
 function checkConditions(stock, rt) {
@@ -2200,7 +2220,7 @@ function calcTimingScore(stock, rt, cond) {
 // 综合评分：质量30% + 聪明钱30% + 技术择时40%
 // 策略参数（可调节）
 const STRATEGY_KEY = 'astock_strategy_params';
-let strategyParams = { fundamentalWeight: 25, valuationWeight: 20, capitalWeight: 20, technicalWeight: 25, riskWeight: 10, minScore: 0 };
+let strategyParams = { fundamentalWeight: 25, valuationWeight: 20, capitalWeight: 20, technicalWeight: 25, riskWeight: 10, minScore: 0, shortMA: 10, longMA: 30 };
 try {
   const saved = JSON.parse(localStorage.getItem(STRATEGY_KEY));
   if (saved) strategyParams = Object.assign(strategyParams, saved);
@@ -2526,6 +2546,8 @@ async function fetchData() {
 
 let currentSector = 'all';
 let trendFilter = null;
+let currentStrategy = 'five_dim'; // five_dim / trend / hybrid
+const STRATEGY_NAMES = { five_dim: '五维共振', trend: '趋势跟踪', hybrid: '混合策略' };
 
 function toggleTrendFilter() {
   const filters = [null, 'golden_cross', 'bullish', 'death_cross', 'bearish'];
@@ -2550,6 +2572,27 @@ function filterByTrend(signal) {
   updateTrendFilterUI();
   renderData();
   showToast(trendFilter ? '趋势筛选: ' + names[trendFilter] : '已显示全部股票');
+}
+
+function cycleStrategy() {
+  const strategies = ['five_dim', 'trend', 'hybrid'];
+  const currentIdx = strategies.indexOf(currentStrategy);
+  currentStrategy = strategies[(currentIdx + 1) % strategies.length];
+  const btn = document.getElementById('strategySwitchBtn');
+  const icons = { five_dim: '🎯五维', trend: '📈趋势', hybrid: '🔀混合' };
+  if (btn) {
+    btn.textContent = icons[currentStrategy];
+    btn.style.background = currentStrategy === 'five_dim' ? '' : 'rgba(139,92,246,0.2)';
+    btn.style.borderColor = currentStrategy === 'five_dim' ? '' : '#8b5cf6';
+    btn.style.color = currentStrategy === 'five_dim' ? '' : '#8b5cf6';
+  }
+  // 更新标题
+  const titleEl = document.querySelector('.count-hint');
+  if (titleEl) {
+    titleEl.textContent = '81只龙头 · 23个板块 · ' + STRATEGY_NAMES[currentStrategy] + '排序';
+  }
+  if (lastRealtime) renderData(lastRealtime);
+  showToast('策略切换: ' + STRATEGY_NAMES[currentStrategy]);
 }
 
 function updateTrendFilterUI() {
@@ -2699,20 +2742,36 @@ function renderData(diff) {
     document.getElementById('trendDeath').textContent = trendCounts.death_cross;
   }
 
-  // Favorites to top, then trend signal priority
+  // Favorites to top, then strategy-based sorting
   const trendPriority = { golden_cross: 5, bullish: 4, none: 3, bearish: 2, death_cross: 1 };
   filteredData.sort((a, b) => {
     const af = isFavorite(a.stock.secid) ? 1 : 0;
     const bf = isFavorite(b.stock.secid) ? 1 : 0;
     if (bf !== af) return bf - af;
-    // 趋势信号排序：金叉>多头>无信号>空头>死叉
+    
     const ta = checkTrendSignal(klineCache[a.stock.secid]);
     const tb = checkTrendSignal(klineCache[b.stock.secid]);
-    const pa = trendPriority[ta.signal] || 3;
-    const pb = trendPriority[tb.signal] || 3;
-    if (pb !== pa) return pb - pa;
-    // 趋势强度排序
-    return tb.strength - ta.strength;
+    
+    if (currentStrategy === 'trend') {
+      // 趋势跟踪：按趋势信号优先级+趋势强度排序
+      const pa = trendPriority[ta.signal] || 3;
+      const pb = trendPriority[tb.signal] || 3;
+      if (pb !== pa) return pb - pa;
+      return tb.strength - ta.strength;
+    } else if (currentStrategy === 'hybrid') {
+      // 混合策略：五维评分*0.7 + 趋势强度*3 综合排序
+      const aHybrid = (a.stock.fiveScore || 0) * 0.7 + Math.max(0, ta.strength) * 3;
+      const bHybrid = (b.stock.fiveScore || 0) * 0.7 + Math.max(0, tb.strength) * 3;
+      return bHybrid - aHybrid;
+    } else {
+      // 五维共振：按五维评分排序，趋势信号作为辅助
+      const scoreDiff = (b.stock.fiveScore || 0) - (a.stock.fiveScore || 0);
+      if (Math.abs(scoreDiff) > 0.5) return scoreDiff;
+      const pa = trendPriority[ta.signal] || 3;
+      const pb = trendPriority[tb.signal] || 3;
+      if (pb !== pa) return pb - pa;
+      return tb.strength - ta.strength;
+    }
   });
 
   // Render
@@ -4561,6 +4620,17 @@ function updateStrategyParams() {
     strategyParams.minScore = parseInt(minScoreEl.value);
     document.getElementById('minScoreVal').textContent = strategyParams.minScore === 0 ? '不限制' : strategyParams.minScore + '分以上';
   }
+  // 趋势信号MA参数
+  const shortMAEl = document.getElementById('shortMA');
+  const longMAEl = document.getElementById('longMA');
+  if (shortMAEl) {
+    strategyParams.shortMA = parseInt(shortMAEl.value);
+    document.getElementById('shortMAVal').textContent = strategyParams.shortMA;
+  }
+  if (longMAEl) {
+    strategyParams.longMA = parseInt(longMAEl.value);
+    document.getElementById('longMAVal').textContent = strategyParams.longMA;
+  }
   const total = f + v + c + t + r;
   document.getElementById('weightWarning').style.display = total !== 100 ? 'block' : 'none';
 }
@@ -4571,6 +4641,10 @@ function applyStrategyParams() {
   strategyParams.capitalWeight = parseInt(document.getElementById('capitalWeight').value);
   strategyParams.technicalWeight = parseInt(document.getElementById('technicalWeight').value);
   strategyParams.riskWeight = parseInt(document.getElementById('riskWeight').value);
+  const shortMAEl = document.getElementById('shortMA');
+  const longMAEl = document.getElementById('longMA');
+  if (shortMAEl) strategyParams.shortMA = parseInt(shortMAEl.value);
+  if (longMAEl) strategyParams.longMA = parseInt(longMAEl.value);
   localStorage.setItem(STRATEGY_KEY, JSON.stringify(strategyParams));
   document.getElementById('strategyModal').classList.remove('active');
   if (lastRealtime) renderData(lastRealtime);
