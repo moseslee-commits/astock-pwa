@@ -121,6 +121,34 @@ tr:hover { background: #1c2128; }
     </table>
   </div>
   
+  <!-- 分年度收益统计 -->
+  <div class="chart-container" style="margin-top:24px">
+    <div class="chart-title">📅 五维共振策略 - 分年度收益统计</div>
+    <canvas id="yearlyChart" style="height:250px"></canvas>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:16px">
+      <div style="background:var(--bg);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">2023年</div>
+        <div style="font-size:20px;font-weight:700" class="positive">+1.42%</div>
+        <div style="font-size:11px;color:#8b949e;margin-top:4px">17次交易 · 胜率47.1%</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">2024年</div>
+        <div style="font-size:20px;font-weight:700" class="positive">+157.38%</div>
+        <div style="font-size:11px;color:#8b949e;margin-top:4px">285次交易 · 胜率50.2%</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">2025年</div>
+        <div style="font-size:20px;font-weight:700" class="positive">+132.70%</div>
+        <div style="font-size:11px;color:#8b949e;margin-top:4px">273次交易 · 胜率49.8%</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">2026年</div>
+        <div style="font-size:20px;font-weight:700" class="positive">+23.94%</div>
+        <div style="font-size:11px;color:#8b949e;margin-top:4px">213次交易 · 胜率46.0%</div>
+      </div>
+    </div>
+  </div>
+  
   <div class="conclusion">
     <h3>💡 回测结论与实盘建议</h3>
     <ul>
@@ -222,6 +250,78 @@ function drawChart() {
 
 drawChart();
 window.addEventListener('resize', drawChart);
+
+// 分年度收益柱状图
+function drawYearlyChart() {
+  const canvas = document.getElementById('yearlyChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 250 * dpr;
+  ctx.scale(dpr, dpr);
+  
+  const W = rect.width, H = 250;
+  const padL = 50, padR = 20, padT = 20, padB = 40;
+  const chartW = W - padL - padR, chartH = H - padT - padB;
+  
+  const yearlyData = {"2023": {"trades": 17, "win_rate": 47.06, "avg_return": 0.08, "total_return": 1.42}, "2024": {"trades": 285, "win_rate": 50.18, "avg_return": 0.55, "total_return": 157.38}, "2025": {"trades": 273, "win_rate": 49.82, "avg_return": 0.49, "total_return": 132.7}, "2026": {"trades": 213, "win_rate": 46.01, "avg_return": 0.11, "total_return": 23.94}};
+  const years = Object.keys(yearlyData).sort();
+  const returns = years.map(y => yearlyData[y].total_return);
+  
+  const maxV = Math.max(...returns, 0) * 1.1;
+  const minV = Math.min(...returns, 0) * 1.1;
+  const range = maxV - minV;
+  
+  // 背景
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, W, H);
+  
+  // 零线
+  const zeroY = padT + chartH * (1 - (0 - minV) / range);
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, zeroY); ctx.lineTo(W - padR, zeroY); ctx.stroke();
+  
+  // 网格线
+  ctx.strokeStyle = '#21262d';
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (chartH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    const val = maxV - (range / 4) * i;
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(val.toFixed(0) + '%', padL - 6, y + 3);
+  }
+  
+  // 柱状图
+  const barW = chartW / years.length * 0.5;
+  years.forEach((year, i) => {
+    const ret = yearlyData[year].total_return;
+    const x = padL + (chartW / years.length) * i + (chartW / years.length - barW) / 2;
+    const y = padT + chartH * (1 - (ret - minV) / range);
+    const h = zeroY - y;
+    
+    ctx.fillStyle = ret >= 0 ? '#52c41a' : '#f5222d';
+    ctx.fillRect(x, Math.min(y, zeroY), barW, Math.abs(h));
+    
+    // 数值标签
+    ctx.fillStyle = ret >= 0 ? '#52c41a' : '#f5222d';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText((ret >= 0 ? '+' : '') + ret.toFixed(1) + '%', x + barW / 2, Math.min(y, zeroY) - 6);
+    
+    // 年份标签
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(year, x + barW / 2, H - padB + 20);
+  });
+}
+
+setTimeout(drawYearlyChart, 100);
+window.addEventListener('resize', drawYearlyChart);
 </script>
 </body>
 </html>

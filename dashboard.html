@@ -88,6 +88,18 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 
 .container { max-width: 1280px; margin: 0 auto; padding: 20px 24px; }
 
+/* 下拉刷新 */
+.pull-refresh {
+  position: fixed; top: 0; left: 0; right: 0; height: 0;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 14px; overflow: hidden;
+  transition: height 0.2s; z-index: 9999;
+}
+.pull-refresh.active { height: 50px; }
+.pull-refresh-icon { display: inline-block; animation: spin 1s linear infinite; margin-right: 8px; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 .sector-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 4px 6px; }
 .filter-label { font-size: 12px; color: var(--text-sec); margin-right: 4px; }
 .sector-tag { padding: 4px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-card); color: var(--text-sec); font-size: 12px; cursor: pointer; transition: all 0.15s; }
@@ -736,6 +748,10 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
     <link rel="icon" type="image/png" href="./icons/icon-192.png">
 </head>
 <body>
+<div class="pull-refresh" id="pullRefresh">
+  <span class="pull-refresh-icon">⟳</span>
+  <span id="pullRefreshText">下拉刷新</span>
+</div>
 <!-- 移动端返回按钮 -->
 <div class="mobile-back-btn" onclick="history.back()" style="display:none">←</div>
 <!-- 移动端底部导航 -->
@@ -747,6 +763,52 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   <a class="mobile-nav-item" href="./价格预警.html"><span class="icon">🔔</span>预警</a>
 </div>
 <script>
+// 下拉刷新功能
+let touchStartY = 0;
+let isPulling = false;
+let pullDistance = 0;
+
+document.addEventListener('touchstart', function(e) {
+  if (window.scrollY === 0) {
+    touchStartY = e.touches[0].clientY;
+    isPulling = true;
+  }
+}, { passive: true });
+
+document.addEventListener('touchmove', function(e) {
+  if (!isPulling) return;
+  pullDistance = e.touches[0].clientY - touchStartY;
+  if (pullDistance > 0 && pullDistance < 100) {
+    const el = document.getElementById('pullRefresh');
+    const text = document.getElementById('pullRefreshText');
+    if (el) {
+      el.style.height = pullDistance + 'px';
+      if (text) text.textContent = pullDistance > 50 ? '释放刷新' : '下拉刷新';
+    }
+  }
+}, { passive: true });
+
+document.addEventListener('touchend', function(e) {
+  if (!isPulling) return;
+  isPulling = false;
+  const el = document.getElementById('pullRefresh');
+  if (pullDistance > 50) {
+    // 触发刷新
+    if (el) {
+      el.classList.add('active');
+      el.style.height = '50px';
+      const text = document.getElementById('pullRefreshText');
+      if (text) text.textContent = '刷新中...';
+    }
+    setTimeout(function() {
+      location.reload();
+    }, 800);
+  } else {
+    if (el) el.style.height = '0';
+  }
+  pullDistance = 0;
+}, { passive: true });
+
 // 移动端检测：显示返回按钮和底部导航
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
   document.querySelector('.mobile-back-btn').style.display = 'flex';
@@ -3581,10 +3643,13 @@ function updateMarketEnv(dataMap) {
   const sentEl = document.getElementById('envSentiment');
   if (sentEl) { sentEl.textContent = sentiment; sentEl.className = 'env-value ' + sentClass; }
 
-  // 3. 涨跌比
+  // 3. 涨跌比 + 市场宽度
   const adEl = document.getElementById('envAdvDec');
   if (adEl) {
-    adEl.textContent = adv + '/' + dec + (flat > 0 ? ' (平' + flat + ')' : '');
+    const width = total > 0 ? (adv / total * 100).toFixed(0) : 0;
+    adEl.innerHTML = adv + '↑ / ' + dec + '↓' + 
+      '<span style="font-size:11px;color:var(--text-sec);margin-left:4px">宽度' + width + '%</span>' +
+      '<span style="font-size:11px;color:var(--text-sec);margin-left:4px">均' + (avgChg >= 0 ? '+' : '') + avgChg.toFixed(2) + '%</span>';
     adEl.className = 'env-value ' + (adv > dec ? 'up' : adv < dec ? 'down' : 'warn');
   }
 
@@ -3645,7 +3710,11 @@ function updateMarketEnv(dataMap) {
   });
   const limitEl = document.getElementById('envLimit');
   if (limitEl) {
-    limitEl.textContent = limitUp + ' / ' + limitDown;
+    const totalStocks = adv + dec + flat;
+    const limitRate = totalStocks > 0 ? (limitUp / totalStocks * 100).toFixed(1) : 0;
+    limitEl.innerHTML = '<span style="color:#f5222d;font-weight:600">' + limitUp + '涨停</span> / ' +
+      '<span style="color:#52c41a;font-weight:600">' + limitDown + '跌停</span>' +
+      '<span style="font-size:11px;color:var(--text-sec);margin-left:4px">涨停率' + limitRate + '%</span>';
     limitEl.className = 'env-value ' + (limitUp > limitDown ? 'up' : limitUp < limitDown ? 'down' : 'warn');
   }
 }
