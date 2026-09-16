@@ -154,6 +154,21 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 .star-btn:active { transform: scale(1.2); }
 
 .index-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.trend-stats-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.trend-stats-title { font-size: 13px; color: var(--text-sec); font-weight: 600; }
+.trend-stat-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.trend-stat-dot { width: 10px; height: 10px; border-radius: 50%; }
+.trend-stat-count { font-weight: 700; font-size: 15px; }
 .market-env-panel {
   background: var(--card);
   border: 1px solid var(--border);
@@ -815,6 +830,16 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         <div class="env-value" id="envLimit">--</div>
       </div>
     </div>
+  </div>
+
+  <!-- 趋势信号统计 -->
+  <div class="trend-stats-panel" id="trendStatsPanel">
+    <span class="trend-stats-title">趋势信号</span>
+    <span class="trend-stat-item"><span class="trend-stat-dot" style="background:#52c41a"></span>金叉 <span class="trend-stat-count" id="trendGolden">0</span></span>
+    <span class="trend-stat-item"><span class="trend-stat-dot" style="background:#389e0d"></span>多头 <span class="trend-stat-count" id="trendBullish">0</span></span>
+    <span class="trend-stat-item"><span class="trend-stat-dot" style="background:#8c8c8c"></span>无信号 <span class="trend-stat-count" id="trendNone">0</span></span>
+    <span class="trend-stat-item"><span class="trend-stat-dot" style="background:#cf1322"></span>空头 <span class="trend-stat-count" id="trendBearish">0</span></span>
+    <span class="trend-stat-item"><span class="trend-stat-dot" style="background:#f5222d"></span>死叉 <span class="trend-stat-count" id="trendDeath">0</span></span>
   </div>
 
   <!-- 板块涨幅排行 -->
@@ -1915,22 +1940,42 @@ function getLimitUpRatio(code) {
   return 1.098; // 主板 10%
 }
 
-// 趋势跟踪信号检测：MA5/MA20金叉死叉
+// 趋势跟踪信号检测：MA10/MA30金叉死叉（回测最优参数）
+// 同时计算MA5/MA20作为快速信号参考
 function checkTrendSignal(klines) {
-  if (!klines || klines.length < 21) return { signal: 'none', ma5: null, ma20: null, strength: 0 };
+  if (!klines || klines.length < 31) return { signal: 'none', maShort: null, maLong: null, ma5: null, ma20: null, strength: 0, fastSignal: 'none' };
   const closes = klines.map(k => k.close);
   const n = closes.length;
-  const ma5_now = closes.slice(n-5).reduce((a,b) => a+b, 0) / 5;
-  const ma5_prev = closes.slice(n-6, n-1).reduce((a,b) => a+b, 0) / 5;
-  const ma20_now = closes.slice(n-20).reduce((a,b) => a+b, 0) / 20;
-  const ma20_prev = closes.slice(n-21, n-1).reduce((a,b) => a+b, 0) / 20;
+  
+  // 主信号：MA10/MA30（回测最优，收益+28.63%）
+  const maShort_now = closes.slice(n-10).reduce((a,b) => a+b, 0) / 10;
+  const maShort_prev = closes.slice(n-11, n-1).reduce((a,b) => a+b, 0) / 10;
+  const maLong_now = closes.slice(n-30).reduce((a,b) => a+b, 0) / 30;
+  const maLong_prev = closes.slice(n-31, n-1).reduce((a,b) => a+b, 0) / 30;
+  
   let signal = 'none';
-  if (ma5_prev <= ma20_prev && ma5_now > ma20_now) signal = 'golden_cross';
-  else if (ma5_prev >= ma20_prev && ma5_now < ma20_now) signal = 'death_cross';
-  else if (ma5_now > ma20_now) signal = 'bullish';
+  if (maShort_prev <= maLong_prev && maShort_now > maLong_now) signal = 'golden_cross';
+  else if (maShort_prev >= maLong_prev && maShort_now < maLong_now) signal = 'death_cross';
+  else if (maShort_now > maLong_now) signal = 'bullish';
   else signal = 'bearish';
-  const strength = ma20_now > 0 ? (ma5_now / ma20_now - 1) * 100 : 0;
-  return { signal, ma5: ma5_now, ma20: ma20_now, strength };
+  
+  const strength = maLong_now > 0 ? (maShort_now / maLong_now - 1) * 100 : 0;
+  
+  // 快速信号：MA5/MA20（更灵敏，用于辅助判断）
+  let fastSignal = 'none';
+  let ma5_now = null, ma20_now = null;
+  if (n >= 21) {
+    ma5_now = closes.slice(n-5).reduce((a,b) => a+b, 0) / 5;
+    const ma5_prev = closes.slice(n-6, n-1).reduce((a,b) => a+b, 0) / 5;
+    ma20_now = closes.slice(n-20).reduce((a,b) => a+b, 0) / 20;
+    const ma20_prev = closes.slice(n-21, n-1).reduce((a,b) => a+b, 0) / 20;
+    if (ma5_prev <= ma20_prev && ma5_now > ma20_now) fastSignal = 'golden_cross';
+    else if (ma5_prev >= ma20_prev && ma5_now < ma20_now) fastSignal = 'death_cross';
+    else if (ma5_now > ma20_now) fastSignal = 'bullish';
+    else fastSignal = 'bearish';
+  }
+  
+  return { signal, maShort: maShort_now, maLong: maLong_now, ma5: ma5_now, ma20: ma20_now, strength, fastSignal };
 }
 
 function checkConditions(stock, rt) {
@@ -2606,6 +2651,21 @@ function renderData(diff) {
   }
   // Quick filter
   filteredData = applyQuickFilter(filteredData);
+  // 趋势信号统计
+  const trendCounts = { golden_cross: 0, bullish: 0, none: 0, bearish: 0, death_cross: 0 };
+  allStocks.forEach(s => {
+    const ts = checkTrendSignal(klineCache[s.secid]);
+    trendCounts[ts.signal] = (trendCounts[ts.signal] || 0) + 1;
+  });
+  const goldenEl = document.getElementById('trendGolden');
+  if (goldenEl) {
+    document.getElementById('trendGolden').textContent = trendCounts.golden_cross;
+    document.getElementById('trendBullish').textContent = trendCounts.bullish;
+    document.getElementById('trendNone').textContent = trendCounts.none;
+    document.getElementById('trendBearish').textContent = trendCounts.bearish;
+    document.getElementById('trendDeath').textContent = trendCounts.death_cross;
+  }
+
   // Favorites to top, then trend signal priority
   const trendPriority = { golden_cross: 5, bullish: 4, none: 3, bearish: 2, death_cross: 1 };
   filteredData.sort((a, b) => {

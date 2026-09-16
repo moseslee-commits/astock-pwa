@@ -282,7 +282,12 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
 
 <!-- 离线状态提示 -->
 <div class="offline-banner" id="offlineBanner">
-    📡 离线模式 - 显示缓存数据，行情可能不是最新
+    📡 离线模式 - 显示缓存数据 <span id="offlineTime"></span>
+</div>
+
+<!-- 数据更新时间 -->
+<div style="text-align:center;padding:8px;font-size:11px;color:var(--text-sec);margin-bottom:70px">
+    数据更新: <span id="dataUpdateTime">--</span>
 </div>
 
 <!-- 底部导航 -->
@@ -430,9 +435,29 @@ function updateOfflineStatus() {
     if (!banner) return;
     if (!navigator.onLine) {
         banner.classList.add('show');
+        // 显示缓存数据最后更新时间
+        const lastUpdate = localStorage.getItem('astock_last_update');
+        const timeEl = document.getElementById('offlineTime');
+        if (timeEl && lastUpdate) {
+            timeEl.textContent = '(最后更新: ' + lastUpdate + ')';
+        }
     } else {
         banner.classList.remove('show');
     }
+}
+
+// 更新数据最后更新时间
+function updateDataTime() {
+    const now = new Date();
+    const timeStr = now.getFullYear() + '-' + 
+        String(now.getMonth()+1).padStart(2,'0') + '-' + 
+        String(now.getDate()).padStart(2,'0') + ' ' +
+        String(now.getHours()).padStart(2,'0') + ':' +
+        String(now.getMinutes()).padStart(2,'0') + ':' +
+        String(now.getSeconds()).padStart(2,'0');
+    localStorage.setItem('astock_last_update', timeStr);
+    const el = document.getElementById('dataUpdateTime');
+    if (el) el.textContent = timeStr;
 }
 window.addEventListener('online', () => {
     updateOfflineStatus();
@@ -445,6 +470,10 @@ window.addEventListener('offline', () => {
 });
 // 初始检查
 setTimeout(updateOfflineStatus, 1000);
+// 初始更新时间
+setTimeout(updateDataTime, 2000);
+// 每30秒更新一次时间
+setInterval(updateDataTime, 30000);
 
 // 页面跳转
 function openPage(url) {
