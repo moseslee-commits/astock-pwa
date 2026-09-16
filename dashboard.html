@@ -2606,11 +2606,20 @@ function renderData(diff) {
   }
   // Quick filter
   filteredData = applyQuickFilter(filteredData);
-  // Favorites to top
+  // Favorites to top, then trend signal priority
+  const trendPriority = { golden_cross: 5, bullish: 4, none: 3, bearish: 2, death_cross: 1 };
   filteredData.sort((a, b) => {
     const af = isFavorite(a.stock.secid) ? 1 : 0;
     const bf = isFavorite(b.stock.secid) ? 1 : 0;
-    return bf - af;
+    if (bf !== af) return bf - af;
+    // 趋势信号排序：金叉>多头>无信号>空头>死叉
+    const ta = checkTrendSignal(klineCache[a.stock.secid]);
+    const tb = checkTrendSignal(klineCache[b.stock.secid]);
+    const pa = trendPriority[ta.signal] || 3;
+    const pb = trendPriority[tb.signal] || 3;
+    if (pb !== pa) return pb - pa;
+    // 趋势强度排序
+    return tb.strength - ta.strength;
   });
 
   // Render

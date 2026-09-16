@@ -147,6 +147,17 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
 .install-btn.primary { background: var(--accent); color: #fff; }
 .install-btn.secondary { background: var(--border); color: var(--text); }
 
+/* 离线状态提示 */
+.offline-banner {
+    position: fixed; top: calc(60px + var(--safe-top)); left: 0; right: 0;
+    background: linear-gradient(135deg, #fa8c16, #fa541c);
+    color: #fff; padding: 8px 16px; font-size: 13px; font-weight: 500;
+    text-align: center; z-index: 1500; display: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.offline-banner.show { display: block; animation: slideDown 0.3s ease; }
+@keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
 /* Toast */
 .toast-container { position: fixed; top: calc(60px + var(--safe-top)); left: 50%; transform: translateX(-50%); z-index: 2000; }
 .toast {
@@ -267,6 +278,11 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
         <div id="installGuideContent" style="font-size:14px;line-height:1.8;color:var(--text-sec);margin-bottom:20px"></div>
         <button onclick="closeInstallGuide()" style="width:100%;padding:12px;background:var(--accent);border:none;color:#fff;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">我知道了</button>
     </div>
+</div>
+
+<!-- 离线状态提示 -->
+<div class="offline-banner" id="offlineBanner">
+    📡 离线模式 - 显示缓存数据，行情可能不是最新
 </div>
 
 <!-- 底部导航 -->
@@ -407,6 +423,28 @@ window.addEventListener('appinstalled', () => {
     localStorage.setItem('app_installed', '1');
     showToast('应用已安装成功！');
 });
+
+// 离线状态检测
+function updateOfflineStatus() {
+    const banner = document.getElementById('offlineBanner');
+    if (!banner) return;
+    if (!navigator.onLine) {
+        banner.classList.add('show');
+    } else {
+        banner.classList.remove('show');
+    }
+}
+window.addEventListener('online', () => {
+    updateOfflineStatus();
+    showToast('网络已恢复，正在刷新数据...');
+    setTimeout(() => location.reload(), 1500);
+});
+window.addEventListener('offline', () => {
+    updateOfflineStatus();
+    showToast('网络已断开，显示缓存数据');
+});
+// 初始检查
+setTimeout(updateOfflineStatus, 1000);
 
 // 页面跳转
 function openPage(url) {
