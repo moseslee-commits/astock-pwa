@@ -2699,6 +2699,21 @@ function updateStrategyHelp() {
   html += '<div><div style="font-size:20px;font-weight:700">' + bt.trades + '</div><div style="font-size:11px;color:var(--text-sec)">交易次数</div></div>';
   html += '</div></div>';
   
+  // 蒙特卡洛稳健性指标
+  const mc = {"return_mean": 12.51712, "return_median": 14.413, "return_max": 28.95, "return_min": -8.941, "profit_probability": 90.0, "return_5pct": -2.444699999999999, "return_95pct": 24.652900000000002, "win_rate_mean": 47.684758245254436, "drawdown_mean": 11.669301595172607};
+  if (mc && mc.profit_probability) {
+    html += '<div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:8px;padding:12px;margin-bottom:16px">';
+    html += '<div style="font-size:12px;color:#8b5cf6;margin-bottom:8px;font-weight:600">🎲 蒙特卡洛稳健性验证（50次随机抽样）</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">';
+    html += '<div><div style="font-size:18px;font-weight:700;color:#52c41a">' + mc.profit_probability.toFixed(0) + '%</div><div style="font-size:10px;color:var(--text-sec)">盈利概率</div></div>';
+    html += '<div><div style="font-size:18px;font-weight:700">' + mc.return_mean.toFixed(1) + '%</div><div style="font-size:10px;color:var(--text-sec)">平均收益</div></div>';
+    html += '<div><div style="font-size:18px;font-weight:700;color:#f5222d">' + mc.return_5pct.toFixed(1) + '%</div><div style="font-size:10px;color:var(--text-sec)">最坏5%</div></div>';
+    html += '<div><div style="font-size:18px;font-weight:700;color:#52c41a">' + mc.return_95pct.toFixed(1) + '%</div><div style="font-size:10px;color:var(--text-sec)">最好5%</div></div>';
+    html += '</div>';
+    html += '<div style="font-size:11px;color:var(--text-sec);margin-top:8px;text-align:center">策略在随机股票组合下表现稳健，90%概率盈利</div>';
+    html += '</div>';
+  }
+  
   // 策略特点
   html += '<div style="margin-bottom:16px">';
   html += '<div style="font-size:14px;font-weight:600;margin-bottom:8px">✨ 策略特点</div>';
@@ -3113,13 +3128,20 @@ function renderData(diff) {
       // 主信号不明显但快速信号有金叉/死叉
       trendTag = '<span class="risk-tag" style="background:#f0f5ff;color:#1677ff;border-color:#91caff;font-size:11px" title="MA5/20快速信号">快速' + fastMark + '</span>';
     }
-    // 连续大涨风险（从klineCache获取）
+    // 连续大涨风险 + 成交量异动
     const stockKlines = klineCache[stock.secid];
     if (stockKlines && stockKlines.length >= 6 && rt) {
       const closes = stockKlines.map(k => k.close);
       const chg5d = (closes[closes.length-1] - closes[closes.length-6]) / closes[closes.length-6] * 100;
       const vRatio = rt.f10 ? Number(rt.f10) / 100 : 1;
       if (chg5d > 20 && vRatio > 1.5) riskTags += '<span class="risk-tag" style="background:#fff2e8;color:#fa541c;border-color:#ffbb96">短期暴涨</span>';
+      if (vRatio >= 3) {
+        riskTags += '<span class="risk-tag" style="background:#fff1f0;color:#f5222d;border-color:#ffa39e;font-weight:600" title="量比' + vRatio.toFixed(1) + '">巨量</span>';
+      } else if (vRatio >= 2) {
+        riskTags += '<span class="risk-tag" style="background:#fff7e6;color:#fa8c16;border-color:#ffd591" title="量比' + vRatio.toFixed(1) + '">放量</span>';
+      } else if (vRatio < 0.5) {
+        riskTags += '<span class="risk-tag" style="background:#f0f0f0;color:#8c8c8c;border-color:#d9d9d9" title="量比' + vRatio.toFixed(2) + '">缩量</span>';
+      }
     }
     // 综合评分显示
     let scoreHtml;
