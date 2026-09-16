@@ -877,6 +877,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     <button class="copy-btn history-btn" onclick="showHistoryPanel()">历史记录</button>
     <button class="copy-btn history-btn" onclick="showBacktest()">策略回测</button>
     <button class="copy-btn history-btn" onclick="showExportMenu()">导出数据</button>
+    <button class="copy-btn history-btn" onclick="toggleTrendFilter()" id="trendFilterBtn">📈趋势</button>
     <button class="copy-btn history-btn" onclick="showStrategyPanel()">策略设置</button>
     <button class="copy-btn history-btn" id="notifyBtn" onclick="toggleNotifications()" title="开启系统通知">🔔 通知</button>
     <button class="copy-btn history-btn" onclick="exportFavorites()" title="导出自选股">导出自选</button>
@@ -2479,6 +2480,24 @@ async function fetchData() {
 }
 
 let currentSector = 'all';
+let trendFilter = null;
+
+function toggleTrendFilter() {
+  const filters = [null, 'golden_cross', 'bullish', 'death_cross', 'bearish'];
+  const names = { 'null': '全部', 'golden_cross': '金叉', 'bullish': '多头', 'death_cross': '死叉', 'bearish': '空头' };
+  const currentIdx = filters.indexOf(trendFilter);
+  trendFilter = filters[(currentIdx + 1) % filters.length];
+  const btn = document.getElementById('trendFilterBtn');
+  if (btn) {
+    btn.textContent = '📈' + (names[String(trendFilter)] || '趋势');
+    btn.style.background = trendFilter ? 'rgba(82,196,26,0.2)' : '';
+    btn.style.borderColor = trendFilter ? '#52c41a' : '';
+  }
+  renderData();
+  if (trendFilter) {
+    showToast('趋势筛选: ' + names[String(trendFilter)]);
+  }
+}
 
 // 板块筛选点击事件
 document.addEventListener('DOMContentLoaded', function() {
@@ -2570,6 +2589,13 @@ function renderData(diff) {
   sortStockData(stockData);
 
   // Filter by sector
+  // 趋势筛选
+  if (trendFilter) {
+    stockData = stockData.filter(item => {
+      const ts = checkTrendSignal(klineCache[item.stock.secid]);
+      return ts.signal === trendFilter;
+    });
+  }
   let filteredData = stockData;
   if (currentSector !== 'all') {
     filteredData = stockData.filter(s => s.stock.sector === currentSector);
