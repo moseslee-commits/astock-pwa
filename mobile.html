@@ -216,27 +216,27 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
     <!-- 核心功能 -->
     <div class="section-title">核心功能</div>
     <div class="grid">
-        <div class="feature-card" onclick="openPage('A股实时看板.html')">
+        <div class="feature-card" onclick="openPage('dashboard.html')">
             <div class="feature-icon" style="background:rgba(99,102,241,0.15)">📊</div>
             <div class="feature-name">实时看板</div>
             <div class="feature-desc">81只龙头股实时行情、五维评分</div>
         </div>
-        <div class="feature-card" onclick="openPage('智能选股器.html')">
+        <div class="feature-card" onclick="openPage('stock-picker.html')">
             <div class="feature-icon" style="background:rgba(82,196,26,0.15)">🎯</div>
             <div class="feature-name">智能选股</div>
             <div class="feature-desc">五维共振多条件筛选选股</div>
         </div>
-        <div class="feature-card" onclick="openPage('持仓管理.html')">
+        <div class="feature-card" onclick="openPage('portfolio.html')">
             <div class="feature-icon" style="background:rgba(250,173,20,0.15)">💼</div>
             <div class="feature-name">持仓管理</div>
             <div class="feature-desc">持仓盈亏、资产分布、交易记录</div>
         </div>
-        <div class="feature-card" onclick="openPage('价格预警.html')">
+        <div class="feature-card" onclick="openPage('price-alert.html')">
             <div class="feature-icon" style="background:rgba(255,77,79,0.15)">🔔</div>
             <div class="feature-name">价格预警</div>
             <div class="feature-desc">突破/跌破预警，实时提醒</div>
         </div>
-        <div class="feature-card" onclick="openPage('选股历史回顾.html')">
+        <div class="feature-card" onclick="openPage('history.html')">
             <div class="feature-icon" style="background:rgba(139,92,246,0.15)">📋</div>
             <div class="feature-name">选股历史</div>
             <div class="feature-desc">历史选股记录回溯与统计</div>
@@ -251,11 +251,21 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
 
 <!-- 安装提示 -->
 <div class="install-prompt" id="installPrompt">
-    <div class="install-title">📱 添加到主屏幕</div>
-    <div class="install-desc">将本应用添加到手机主屏幕，即可像原生App一样全屏使用，支持离线访问。</div>
+    <div class="install-title">📱 安装到主屏幕</div>
+    <div class="install-desc">添加到主屏幕后，可像原生App一样全屏使用，支持离线访问，行情数据实时更新。</div>
     <div class="install-btns">
-        <button class="install-btn secondary" onclick="hideInstallPrompt()">稍后</button>
+        <button class="install-btn secondary" onclick="hideInstallPrompt()">稍后提醒</button>
+        <button class="install-btn primary" id="installNowBtn" onclick="installApp()" style="display:none">立即安装</button>
         <button class="install-btn primary" onclick="showInstallGuide()">查看方法</button>
+    </div>
+</div>
+
+<!-- 安装指南模态框 -->
+<div class="wechat-modal-overlay" id="installGuideModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:3000;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--card);border-radius:16px;padding:24px;max-width:360px;width:100%;border:1px solid var(--border)">
+        <div style="font-size:18px;font-weight:700;margin-bottom:16px;text-align:center">📲 安装到主屏幕</div>
+        <div id="installGuideContent" style="font-size:14px;line-height:1.8;color:var(--text-sec);margin-bottom:20px"></div>
+        <button onclick="closeInstallGuide()" style="width:100%;padding:12px;background:var(--accent);border:none;color:#fff;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">我知道了</button>
     </div>
 </div>
 
@@ -264,16 +274,16 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
     <a class="nav-item active" href="./mobile.html">
         <span class="icon">🏠</span><span class="label">首页</span>
     </a>
-    <a class="nav-item" href="./A股实时看板.html">
+    <a class="nav-item" href="./dashboard.html">
         <span class="icon">📊</span><span class="label">看板</span>
     </a>
-    <a class="nav-item" href="./智能选股器.html">
+    <a class="nav-item" href="./stock-picker.html">
         <span class="icon">🎯</span><span class="label">选股</span>
     </a>
-    <a class="nav-item" href="./持仓管理.html">
+    <a class="nav-item" href="./portfolio.html">
         <span class="icon">💼</span><span class="label">持仓</span>
     </a>
-    <a class="nav-item" href="./价格预警.html">
+    <a class="nav-item" href="./price-alert.html">
         <span class="icon">🔔</span><span class="label">预警</span>
     </a>
 </div>
@@ -299,19 +309,65 @@ if ('serviceWorker' in navigator) {
 
 // PWA安装事件
 let deferredPrompt;
+let installPromptDismissed = 0;
+
+// 检测是否已安装（standalone模式）
+function isAppInstalled() {
+    return (window.matchMedia('(display-mode: standalone)').matches) || 
+           (window.navigator.standalone === true) ||
+           (document.referrer.includes('android-app://'));
+}
+
+// 显示安装提示
+function maybeShowInstallPrompt() {
+    if (isAppInstalled()) return; // 已安装不显示
+    
+    const lastDismiss = parseInt(localStorage.getItem('install_prompt_dismissed') || '0');
+    const now = Date.now();
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    
+    // 如果7天内已关闭过，不显示
+    if (lastDismiss && (now - lastDismiss) < sevenDays) return;
+    
+    setTimeout(() => {
+        document.getElementById('installPrompt').classList.add('show');
+        // 如果支持原生安装提示，显示"立即安装"按钮
+        if (deferredPrompt) {
+            const btn = document.getElementById('installNowBtn');
+            if (btn) btn.style.display = 'block';
+        }
+    }, 3000);
+}
+
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    setTimeout(() => {
-        if (!localStorage.getItem('install_prompt_shown')) {
-            document.getElementById('installPrompt').classList.add('show');
-            localStorage.setItem('install_prompt_shown', '1');
-        }
-    }, 3000);
+    maybeShowInstallPrompt();
 });
+
+// 如果不支持beforeinstallprompt（iOS），也显示提示
+if (!window.BeforeInstallPromptEvent) {
+    setTimeout(maybeShowInstallPrompt, 3000);
+}
 
 function hideInstallPrompt() {
     document.getElementById('installPrompt').classList.remove('show');
+    localStorage.setItem('install_prompt_dismissed', Date.now().toString());
+}
+
+function installApp() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                showToast('安装成功！');
+            }
+            deferredPrompt = null;
+        });
+    } else {
+        showInstallGuide();
+    }
+    hideInstallPrompt();
 }
 
 function showInstallGuide() {
@@ -320,18 +376,37 @@ function showInstallGuide() {
     const isAndroid = /Android/.test(navigator.userAgent);
     let guide = '';
     if (isIOS) {
-        guide = 'iOS安装方法：\n1. 点击底部分享按钮\n2. 选择"添加到主屏幕"\n3. 点击"添加"';
+        guide = `<div style="margin-bottom:12px"><strong style="color:var(--accent)">iPhone / iPad 安装步骤：</strong></div>
+        <div>1. 点击浏览器底部的 <strong>分享</strong> 按钮 <span style="font-size:20px">⎋</span></div>
+        <div>2. 向下滑动，选择 <strong>"添加到主屏幕"</strong></div>
+        <div>3. 点击右上角 <strong>"添加"</strong></div>
+        <div style="margin-top:12px;padding:10px;background:rgba(99,102,241,0.1);border-radius:8px;font-size:12px">添加后，主屏幕会出现"智能选股"图标，点击即可全屏使用</div>`;
     } else if (isAndroid) {
-        guide = '安卓安装方法：\n1. 点击浏览器菜单(⋮)\n2. 选择"添加到主屏幕"或"安装应用"\n3. 确认添加';
+        guide = `<div style="margin-bottom:12px"><strong style="color:var(--accent)">安卓手机安装步骤：</strong></div>
+        <div>1. 点击浏览器右上角的 <strong>菜单</strong> 按钮 <span style="font-size:20px">⋮</span></div>
+        <div>2. 选择 <strong>"添加到主屏幕"</strong> 或 <strong>"安装应用"</strong></div>
+        <div>3. 确认添加，等待安装完成</div>
+        <div style="margin-top:12px;padding:10px;background:rgba(99,102,241,0.1);border-radius:8px;font-size:12px">Chrome浏览器会自动检测PWA，可能直接弹出安装提示</div>`;
     } else {
-        guide = '请在手机浏览器中打开此页面，然后选择"添加到主屏幕"';
+        guide = `<div style="margin-bottom:12px"><strong style="color:var(--accent)">安装说明：</strong></div>
+        <div>请在手机浏览器（Chrome / Safari）中打开此页面</div>
+        <div style="margin-top:8px">iOS：分享 → 添加到主屏幕</div>
+        <div>Android：菜单 → 添加到主屏幕 / 安装应用</div>`;
     }
-    alert(guide);
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
-    }
+    document.getElementById('installGuideContent').innerHTML = guide;
+    document.getElementById('installGuideModal').style.display = 'flex';
 }
+
+function closeInstallGuide() {
+    document.getElementById('installGuideModal').style.display = 'none';
+}
+
+// 安装成功后隐藏提示
+window.addEventListener('appinstalled', () => {
+    hideInstallPrompt();
+    localStorage.setItem('app_installed', '1');
+    showToast('应用已安装成功！');
+});
 
 // 页面跳转
 function openPage(url) {
