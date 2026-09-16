@@ -1,7 +1,8 @@
-// A股智能选股系统 Service Worker v3
-const CACHE_NAME = 'astock-pwa-v3';
-const STATIC_CACHE = 'astock-static-v3';
-const RUNTIME_CACHE = 'astock-runtime-v3';
+// A股智能选股系统 Service Worker v4
+const CACHE_NAME = 'astock-pwa-v4';
+const STATIC_CACHE = 'astock-static-v4';
+const RUNTIME_CACHE = 'astock-runtime-v4';
+const API_CACHE = 'astock-api-v4';
 
 // 核心静态资源（安装时缓存）
 const CORE_ASSETS = [
@@ -22,6 +23,10 @@ const CORE_ASSETS = [
 // 离线回退页面
 const OFFLINE_PAGE = './mobile.html';
 
+// API缓存最大数量和过期时间（毫秒）
+const API_CACHE_MAX = 50;
+const API_CACHE_TTL = 5 * 60 * 1000; // 5分钟
+
 // 安装：缓存核心资源
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -29,7 +34,6 @@ self.addEventListener('install', (event) => {
       .then((cache) => {
         return cache.addAll(CORE_ASSETS).catch(err => {
           console.log('部分资源缓存失败:', err);
-          // 逐个缓存，避免一个失败导致全部失败
           return Promise.all(CORE_ASSETS.map(url => 
             cache.add(url).catch(e => console.log('缓存失败:', url, e))
           ));
@@ -45,12 +49,45 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => !name.includes('v3'))
+          .filter((name) => !name.includes('v4'))
           .map((name) => caches.delete(name))
       );
     }).then(() => self.clients.claim())
   );
 });
+
+// 检查缓存是否过期
+function isCacheExpired(response) {
+  if (!response) return true;
+  const cachedTime = response.headers.get('sw-cache-time');
+  if (!cachedTime) return true;
+  return (Date.now() - parseInt(cachedTime)) > API_CACHE_TTL;
+}
+
+// 缓存API响应（带时间戳）
+async function cacheApiResponse(request, response) {
+  if (!response || response.status !== 200) return;
+  const clone = response.clone();
+  const headers = new Headers(clone.headers);
+  headers.set('sw-cache-time', Date.now().toString());
+  
+  const cachedResponse = new Response(await clone.blob(), {
+    status: clone.status,
+    statusText: clone.statusText,
+    headers: headers
+  });
+  
+  const cache = await caches.open(API_CACHE);
+  await cache.put(request, cachedResponse);
+  
+  // 清理过期缓存，控制缓存数量
+  const keys = await cache.keys();
+  if (keys.length > API_CACHE_MAX) {
+    for (let i = 0; i < keys.length - API_CACHE_MAX; i++) {
+      await cache.delete(keys[i]);
+    }
+  }
+}
 
 // 请求拦截：智能缓存策略
 self.addEventListener('fetch', (event) => {
@@ -61,12 +98,34 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // API请求不缓存（行情数据需要实时）
-  if (url.pathname.startsWith('/api/') ||
+  // API请求：网络优先，失败回退缓存（Stale-While-Revalidate）
+  const isApiRequest = url.pathname.startsWith('/api/') ||
       url.hostname.includes('eastmoney.com') ||
       url.hostname.includes('push2') ||
-      url.hostname.includes('sina')) {
-    return; // 走网络，不缓存
+      url.hostname.includes('sina');
+  
+  if (isApiRequest) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // 缓存成功的API响应
+          cacheApiResponse(request, response.clone());
+          return response;
+        })
+        .catch(async () => {
+          // 网络失败，尝试缓存
+          const cached = await caches.match(request);
+          if (cached) {
+            // 返回缓存数据，即使过期也返回（离线时总比没有好）
+            return cached;
+          }
+          // 返回空数据响应
+          return new Response(JSON.stringify({ error: 'offline', data: [] }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        })
+    );
+    return;
   }
 
   // HTML页面：网络优先，失败回退缓存
@@ -74,7 +133,6 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // 动态缓存成功的页面
           if (response && response.status === 200) {
             const responseClone = response.clone();
             caches.open(RUNTIME_CACHE).then((cache) => {
@@ -84,7 +142,6 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // 网络失败，尝试缓存
           return caches.match(request).then((cached) => {
             return cached || caches.match(OFFLINE_PAGE);
           });
@@ -111,7 +168,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 监听推送消息（预留，未来可接入Web Push）
+// 监听推送消息
 self.addEventListener('push', (event) => {
   if (event.data) {
     const data = event.data.json();
@@ -141,4 +198,15 @@ self.addEventListener('notificationclick', (event) => {
       }
     })
   );
+});
+
+// 离线状态检测：通知页面
+self.addEventListener('message', (event) => {
+  if (event.data === 'getOfflineStatus') {
+    event.source.postMessage({
+      type: 'offlineStatus',
+      online: self.navigator.onLine,
+      apiCacheSize: API_CACHE_MAX
+    });
+  }
 });

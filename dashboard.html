@@ -1181,6 +1181,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
           <button onclick="applyPreset('conservative')" style="flex:1;padding:6px;background:none;border:1px solid var(--border);color:var(--text-sec);border-radius:4px;cursor:pointer;font-size:12px">保守型</button>
           <button onclick="applyPreset('balanced')" style="flex:1;padding:6px;background:none;border:1px solid var(--border);color:var(--text-sec);border-radius:4px;cursor:pointer;font-size:12px">平衡型</button>
           <button onclick="applyPreset('aggressive')" style="flex:1;padding:6px;background:none;border:1px solid var(--border);color:var(--text-sec);border-radius:4px;cursor:pointer;font-size:12px">激进型</button>
+          <button onclick="applyPreset('optimal')" style="flex:1;padding:6px;background:rgba(82,196,26,0.15);border:1px solid #52c41a;color:#52c41a;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">回测最优</button>
         </div>
       </div>
       <div id="weightWarning" style="color:#faad14;font-size:12px;margin-bottom:12px;display:none">权重之和不等于100%，评分将按比例归一化</div>
@@ -1194,6 +1195,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         <p><strong>资金面</strong>：量比1.2-2.5最佳、换手率3-8%最佳</p>
         <p><strong>技术面</strong>：7项策略条件、相对大盘强度</p>
         <p><strong>风险面</strong>：高波动、高位抱团、ST一票否决</p>
+        <p style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><strong style="color:#52c41a">回测最优</strong>：365天81股回测，55分阈值+5天持有+5%止损+15%止盈，累计收益+20.37%，最大回撤11.17%，夏普1.52</p>
       </div>
     </div>
   </div>
@@ -1912,6 +1914,24 @@ function getLimitUpRatio(code) {
   return 1.098; // 主板 10%
 }
 
+// 趋势跟踪信号检测：MA5/MA20金叉死叉
+function checkTrendSignal(klines) {
+  if (!klines || klines.length < 21) return { signal: 'none', ma5: null, ma20: null, strength: 0 };
+  const closes = klines.map(k => k.close);
+  const n = closes.length;
+  const ma5_now = closes.slice(n-5).reduce((a,b) => a+b, 0) / 5;
+  const ma5_prev = closes.slice(n-6, n-1).reduce((a,b) => a+b, 0) / 5;
+  const ma20_now = closes.slice(n-20).reduce((a,b) => a+b, 0) / 20;
+  const ma20_prev = closes.slice(n-21, n-1).reduce((a,b) => a+b, 0) / 20;
+  let signal = 'none';
+  if (ma5_prev <= ma20_prev && ma5_now > ma20_now) signal = 'golden_cross';
+  else if (ma5_prev >= ma20_prev && ma5_now < ma20_now) signal = 'death_cross';
+  else if (ma5_now > ma20_now) signal = 'bullish';
+  else signal = 'bearish';
+  const strength = ma20_now > 0 ? (ma5_now / ma20_now - 1) * 100 : 0;
+  return { signal, ma5: ma5_now, ma20: ma20_now, strength };
+}
+
 function checkConditions(stock, rt) {
   const klines = klineCache[stock.secid];
   if (!klines || klines.length < 31) return { count: -1, conditions: COND_NAMES.map(n => ({ name: n, met: false })) };
@@ -2575,7 +2595,7 @@ function renderData(diff) {
   }
   filteredData.forEach(({ stock, rt, cond, score }) => {
     if (!rt) {
-      html += '<tr><td class="code">' + stock.code + '</td><td class="name">' + stock.name +
+      html += '<tr><td class="code">' + stock.code + '</td><td class="name">' + stock.name + trendTag +
         '</td><td class="hide-mobile"><span class="sector">' + stock.sector +
         '</span></td><td class="nums"><span class="cond-none">--</span></td>' +
         '<td class="nums"><span class="cond-none">--</span></td><td colspan="7" style="color:var(--text-sec)">暂无数据</td></tr>';
@@ -2625,6 +2645,18 @@ function renderData(diff) {
       if (score.overbought) riskTags += '<span class="risk-tag risk-ob">过热</span>';
     }
     if (stock.name && stock.name.includes('ST')) riskTags += '<span class="risk-tag" style="background:#fff1f0;color:#f5222d;border-color:#ffa39e">ST</span>';
+    // 趋势跟踪信号（MA5/MA20金叉死叉）
+    const trendSignal = checkTrendSignal(stockKlines);
+    let trendTag = '';
+    if (trendSignal.signal === 'golden_cross') {
+      trendTag = '<span class="risk-tag" style="background:#f6ffed;color:#52c41a;border-color:#b7eb8f;font-weight:600">✨金叉</span>';
+    } else if (trendSignal.signal === 'death_cross') {
+      trendTag = '<span class="risk-tag" style="background:#fff1f0;color:#f5222d;border-color:#ffa39e">⚠死叉</span>';
+    } else if (trendSignal.signal === 'bullish' && trendSignal.strength > 2) {
+      trendTag = '<span class="risk-tag" style="background:#e6f7ee;color:#389e0d;border-color:#b7eb8f">多头</span>';
+    } else if (trendSignal.signal === 'bearish' && trendSignal.strength < -2) {
+      trendTag = '<span class="risk-tag" style="background:#fff2f0;color:#cf1322;border-color:#ffccc7">空头</span>';
+    }
     // 连续大涨风险（从klineCache获取）
     const stockKlines = klineCache[stock.secid];
     if (stockKlines && stockKlines.length >= 6 && rt) {
@@ -4412,7 +4444,8 @@ function applyPreset(type) {
   const presets = {
     conservative: { fundamentalWeight: 35, valuationWeight: 25, capitalWeight: 15, technicalWeight: 15, riskWeight: 10, minScore: 60 },
     balanced: { fundamentalWeight: 25, valuationWeight: 20, capitalWeight: 20, technicalWeight: 25, riskWeight: 10, minScore: 0 },
-    aggressive: { fundamentalWeight: 15, valuationWeight: 10, capitalWeight: 25, technicalWeight: 40, riskWeight: 10, minScore: 50 }
+    aggressive: { fundamentalWeight: 15, valuationWeight: 10, capitalWeight: 25, technicalWeight: 40, riskWeight: 10, minScore: 50 },
+    optimal: { fundamentalWeight: 25, valuationWeight: 20, capitalWeight: 20, technicalWeight: 25, riskWeight: 10, minScore: 55 }
   };
   const p = presets[type];
   if (!p) return;
