@@ -834,12 +834,12 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
 
   <!-- 趋势信号统计 -->
   <div class="trend-stats-panel" id="trendStatsPanel">
-    <span class="trend-stats-title">趋势信号</span>
-    <span class="trend-stat-item"><span class="trend-stat-dot" style="background:#52c41a"></span>金叉 <span class="trend-stat-count" id="trendGolden">0</span></span>
-    <span class="trend-stat-item"><span class="trend-stat-dot" style="background:#389e0d"></span>多头 <span class="trend-stat-count" id="trendBullish">0</span></span>
-    <span class="trend-stat-item"><span class="trend-stat-dot" style="background:#8c8c8c"></span>无信号 <span class="trend-stat-count" id="trendNone">0</span></span>
-    <span class="trend-stat-item"><span class="trend-stat-dot" style="background:#cf1322"></span>空头 <span class="trend-stat-count" id="trendBearish">0</span></span>
-    <span class="trend-stat-item"><span class="trend-stat-dot" style="background:#f5222d"></span>死叉 <span class="trend-stat-count" id="trendDeath">0</span></span>
+    <span class="trend-stats-title">趋势信号（点击筛选）</span>
+    <span class="trend-stat-item" style="cursor:pointer" onclick="filterByTrend('golden_cross')" title="点击筛选金叉股票"><span class="trend-stat-dot" style="background:#52c41a"></span>金叉 <span class="trend-stat-count" id="trendGolden">0</span></span>
+    <span class="trend-stat-item" style="cursor:pointer" onclick="filterByTrend('bullish')" title="点击筛选多头股票"><span class="trend-stat-dot" style="background:#389e0d"></span>多头 <span class="trend-stat-count" id="trendBullish">0</span></span>
+    <span class="trend-stat-item" style="cursor:pointer" onclick="filterByTrend('none')" title="点击显示全部"><span class="trend-stat-dot" style="background:#8c8c8c"></span>全部 <span class="trend-stat-count" id="trendNone">0</span></span>
+    <span class="trend-stat-item" style="cursor:pointer" onclick="filterByTrend('bearish')" title="点击筛选空头股票"><span class="trend-stat-dot" style="background:#cf1322"></span>空头 <span class="trend-stat-count" id="trendBearish">0</span></span>
+    <span class="trend-stat-item" style="cursor:pointer" onclick="filterByTrend('death_cross')" title="点击筛选死叉股票"><span class="trend-stat-dot" style="background:#f5222d"></span>死叉 <span class="trend-stat-count" id="trendDeath">0</span></span>
   </div>
 
   <!-- 板块涨幅排行 -->
@@ -2532,15 +2532,48 @@ function toggleTrendFilter() {
   const names = { 'null': '全部', 'golden_cross': '金叉', 'bullish': '多头', 'death_cross': '死叉', 'bearish': '空头' };
   const currentIdx = filters.indexOf(trendFilter);
   trendFilter = filters[(currentIdx + 1) % filters.length];
+  updateTrendFilterUI();
+  renderData();
+  if (trendFilter) {
+    showToast('趋势筛选: ' + names[String(trendFilter)]);
+  }
+}
+
+function filterByTrend(signal) {
+  const names = { 'null': '全部', 'none': '全部', 'golden_cross': '金叉', 'bullish': '多头', 'death_cross': '死叉', 'bearish': '空头' };
+  // 点击"全部"或重复点击当前筛选则取消筛选
+  if (signal === 'none' || trendFilter === signal) {
+    trendFilter = null;
+  } else {
+    trendFilter = signal;
+  }
+  updateTrendFilterUI();
+  renderData();
+  showToast(trendFilter ? '趋势筛选: ' + names[trendFilter] : '已显示全部股票');
+}
+
+function updateTrendFilterUI() {
   const btn = document.getElementById('trendFilterBtn');
+  const names = { 'null': '趋势', 'golden_cross': '金叉', 'bullish': '多头', 'death_cross': '死叉', 'bearish': '空头' };
   if (btn) {
     btn.textContent = '📈' + (names[String(trendFilter)] || '趋势');
     btn.style.background = trendFilter ? 'rgba(82,196,26,0.2)' : '';
     btn.style.borderColor = trendFilter ? '#52c41a' : '';
   }
-  renderData();
+  // 高亮统计面板中当前筛选的项
+  document.querySelectorAll('.trend-stat-item').forEach(item => {
+    item.style.opacity = '1';
+    item.style.background = '';
+  });
   if (trendFilter) {
-    showToast('趋势筛选: ' + names[String(trendFilter)]);
+    const signalMap = { golden_cross: 0, bullish: 1, none: 2, bearish: 3, death_cross: 4 };
+    const items = document.querySelectorAll('.trend-stat-item');
+    const idx = signalMap[trendFilter];
+    if (idx !== undefined && items[idx]) {
+      items[idx].style.background = 'rgba(82,196,26,0.15)';
+      items[idx].style.borderRadius = '6px';
+      items[idx].style.padding = '4px 8px';
+    }
   }
 }
 
@@ -2743,14 +2776,22 @@ function renderData(diff) {
     // 趋势跟踪信号（MA5/MA20金叉死叉）
     const trendSignal = checkTrendSignal(stockKlines);
     let trendTag = '';
+    // 快速信号标记（MA5/20）
+    let fastMark = '';
+    if (trendSignal.fastSignal === 'golden_cross') fastMark = '<span style="font-size:10px;margin-left:2px" title="MA5/20金叉">⚡</span>';
+    else if (trendSignal.fastSignal === 'death_cross') fastMark = '<span style="font-size:10px;margin-left:2px" title="MA5/20死叉">🔻</span>';
+    
     if (trendSignal.signal === 'golden_cross') {
-      trendTag = '<span class="risk-tag" style="background:#f6ffed;color:#52c41a;border-color:#b7eb8f;font-weight:600">✨金叉</span>';
+      trendTag = '<span class="risk-tag" style="background:#f6ffed;color:#52c41a;border-color:#b7eb8f;font-weight:600" title="MA10/30金叉">✨金叉' + fastMark + '</span>';
     } else if (trendSignal.signal === 'death_cross') {
-      trendTag = '<span class="risk-tag" style="background:#fff1f0;color:#f5222d;border-color:#ffa39e">⚠死叉</span>';
+      trendTag = '<span class="risk-tag" style="background:#fff1f0;color:#f5222d;border-color:#ffa39e" title="MA10/30死叉">⚠死叉' + fastMark + '</span>';
     } else if (trendSignal.signal === 'bullish' && trendSignal.strength > 2) {
-      trendTag = '<span class="risk-tag" style="background:#e6f7ee;color:#389e0d;border-color:#b7eb8f">多头</span>';
+      trendTag = '<span class="risk-tag" style="background:#e6f7ee;color:#389e0d;border-color:#b7eb8f" title="MA10/30多头排列">多头' + fastMark + '</span>';
     } else if (trendSignal.signal === 'bearish' && trendSignal.strength < -2) {
-      trendTag = '<span class="risk-tag" style="background:#fff2f0;color:#cf1322;border-color:#ffccc7">空头</span>';
+      trendTag = '<span class="risk-tag" style="background:#fff2f0;color:#cf1322;border-color:#ffccc7" title="MA10/30空头排列">空头' + fastMark + '</span>';
+    } else if (fastMark) {
+      // 主信号不明显但快速信号有金叉/死叉
+      trendTag = '<span class="risk-tag" style="background:#f0f5ff;color:#1677ff;border-color:#91caff;font-size:11px" title="MA5/20快速信号">快速' + fastMark + '</span>';
     }
     // 连续大涨风险（从klineCache获取）
     const stockKlines = klineCache[stock.secid];

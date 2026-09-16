@@ -158,6 +158,57 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
 .offline-banner.show { display: block; animation: slideDown 0.3s ease; }
 @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
 
+/* 缓存状态面板 */
+.cache-status-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin: 12px 16px;
+    font-size: 12px;
+}
+.cache-status-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.cache-status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.cache-status-item {
+    text-align: center;
+    padding: 8px;
+    background: var(--bg);
+    border-radius: 8px;
+}
+.cache-status-num {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+}
+.cache-status-label {
+    font-size: 10px;
+    color: var(--text-sec);
+    margin-top: 2px;
+}
+.cache-progress {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+.cache-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #8b5cf6);
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+
 /* Toast */
 .toast-container { position: fixed; top: calc(60px + var(--safe-top)); left: 50%; transform: translateX(-50%); z-index: 2000; }
 .toast {
@@ -283,6 +334,31 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
 <!-- 离线状态提示 -->
 <div class="offline-banner" id="offlineBanner">
     📡 离线模式 - 显示缓存数据 <span id="offlineTime"></span>
+</div>
+
+<!-- 离线缓存状态 -->
+<div class="cache-status-panel" id="cacheStatusPanel">
+    <div class="cache-status-title">
+        <span>📦 离线缓存状态</span>
+        <span style="font-size:10px;color:var(--text-sec)" id="cacheMode">在线</span>
+    </div>
+    <div class="cache-status-grid">
+        <div class="cache-status-item">
+            <div class="cache-status-num" id="cachePages">0</div>
+            <div class="cache-status-label">缓存页面</div>
+        </div>
+        <div class="cache-status-item">
+            <div class="cache-status-num" id="cacheApi">0</div>
+            <div class="cache-status-label">API缓存</div>
+        </div>
+        <div class="cache-status-item">
+            <div class="cache-status-num" id="cacheSize">0</div>
+            <div class="cache-status-label">缓存大小(KB)</div>
+        </div>
+    </div>
+    <div class="cache-progress">
+        <div class="cache-progress-fill" id="cacheProgress" style="width:0%"></div>
+    </div>
 </div>
 
 <!-- 数据更新时间 -->
@@ -474,6 +550,47 @@ setTimeout(updateOfflineStatus, 1000);
 setTimeout(updateDataTime, 2000);
 // 每30秒更新一次时间
 setInterval(updateDataTime, 30000);
+
+// 更新缓存状态
+async function updateCacheStatus() {
+    try {
+        if (!('caches' in window)) return;
+        const cacheNames = await caches.keys();
+        let pageCount = 0, apiCount = 0, totalSize = 0;
+        
+        for (const name of cacheNames) {
+            const cache = await caches.open(name);
+            const requests = await cache.keys();
+            for (const req of requests) {
+                const url = new URL(req.url);
+                if (url.pathname.startsWith('/api/') || url.hostname.includes('eastmoney') || url.hostname.includes('sina')) {
+                    apiCount++;
+                } else {
+                    pageCount++;
+                }
+                try {
+                    const resp = await cache.match(req);
+                    if (resp) {
+                        const blob = await resp.clone().blob();
+                        totalSize += blob.size;
+                    }
+                } catch(e) {}
+            }
+        }
+        
+        document.getElementById('cachePages').textContent = pageCount;
+        document.getElementById('cacheApi').textContent = apiCount;
+        document.getElementById('cacheSize').textContent = (totalSize / 1024).toFixed(1);
+        document.getElementById('cacheProgress').style.width = Math.min(100, (apiCount / 50) * 100) + '%';
+        document.getElementById('cacheMode').textContent = navigator.onLine ? '在线' : '离线';
+    } catch(e) {
+        console.log('缓存状态更新失败:', e);
+    }
+}
+
+// 初始更新缓存状态
+setTimeout(updateCacheStatus, 3000);
+setInterval(updateCacheStatus, 60000);
 
 // 页面跳转
 function openPage(url) {
