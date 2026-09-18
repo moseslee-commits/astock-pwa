@@ -88,6 +88,68 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 
 .container { max-width: 1280px; margin: 0 auto; padding: 20px 24px; }
 
+/* 手势操作 */
+.stock-row {
+  position: relative;
+  transition: transform 0.2s ease;
+  touch-action: pan-y;
+}
+.stock-row.swiping {
+  transition: none;
+}
+.stock-row .swipe-actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  transform: translateX(100%);
+  z-index: 1;
+}
+.stock-row .swipe-btn {
+  height: 100%;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+}
+.stock-row .swipe-btn.delete {
+  background: #f5222d;
+}
+.stock-row .swipe-btn.detail {
+  background: #1677ff;
+}
+.stock-row.swiped-left {
+  transform: translateX(-120px);
+}
+.stock-row.swiped-right {
+  transform: translateX(80px);
+}
+.swipe-hint {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  z-index: 9998;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.swipe-hint.show {
+  opacity: 1;
+}
+
 /* 下拉刷新 */
 .pull-refresh {
   position: fixed; top: 0; left: 0; right: 0; height: 0;
@@ -748,6 +810,7 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
     <link rel="icon" type="image/png" href="./icons/icon-192.png">
 </head>
 <body>
+<div class="swipe-hint" id="swipeHint">← 左滑删除自选 | 右滑查看详情 →</div>
 <div class="pull-refresh" id="pullRefresh">
   <span class="pull-refresh-icon">⟳</span>
   <span id="pullRefreshText">下拉刷新</span>
@@ -763,6 +826,103 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   <a class="mobile-nav-item" href="./价格预警.html"><span class="icon">🔔</span>预警</a>
 </div>
 <script>
+// 手势操作功能
+let swipeStartX = 0;
+let swipeStartY = 0;
+let swipeCurrentRow = null;
+let isSwiping = false;
+let swipeDirection = null;
+
+function initSwipeGestures() {
+  const rows = document.querySelectorAll('#stockBody tr');
+  rows.forEach(row => {
+    row.addEventListener('touchstart', handleSwipeStart, { passive: true });
+    row.addEventListener('touchmove', handleSwipeMove, { passive: true });
+    row.addEventListener('touchend', handleSwipeEnd, { passive: true });
+  });
+}
+
+function handleSwipeStart(e) {
+  if (e.touches.length !== 1) return;
+  swipeStartX = e.touches[0].clientX;
+  swipeStartY = e.touches[0].clientY;
+  swipeCurrentRow = e.currentTarget;
+  isSwiping = false;
+  swipeDirection = null;
+  swipeCurrentRow.classList.add('swiping');
+}
+
+function handleSwipeMove(e) {
+  if (!swipeCurrentRow || e.touches.length !== 1) return;
+  const deltaX = e.touches[0].clientX - swipeStartX;
+  const deltaY = e.touches[0].clientY - swipeStartY;
+  
+  // 判断是否为水平滑动
+  if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) {
+    isSwiping = true;
+    if (deltaX < 0) swipeDirection = 'left';
+    else swipeDirection = 'right';
+    
+    // 限制滑动距离
+    const maxSwipe = swipeDirection === 'left' ? -120 : 80;
+    const translate = Math.max(maxSwipe, Math.min(0, deltaX * 0.5));
+    swipeCurrentRow.style.transform = 'translateX(' + translate + 'px)';
+  }
+}
+
+function handleSwipeEnd(e) {
+  if (!swipeCurrentRow) return;
+  swipeCurrentRow.classList.remove('swiping');
+  
+  if (isSwiping && swipeDirection) {
+    const transform = swipeCurrentRow.style.transform;
+    const match = transform.match(/translateX\((-?\d+(?:\.\d+)?)px\)/);
+    const translateX = match ? parseFloat(match[1]) : 0;
+    
+    if (swipeDirection === 'left' && translateX < -50) {
+      // 左滑：删除自选股
+      swipeCurrentRow.classList.add('swiped-left');
+      swipeCurrentRow.style.transform = 'translateX(-120px)';
+      const secid = swipeCurrentRow.getAttribute('data-secid');
+      if (secid && isFavorite(secid)) {
+        setTimeout(() => {
+          if (confirm('确定从自选股中删除？')) {
+            toggleFavorite(secid);
+            swipeCurrentRow.style.transform = '';
+            swipeCurrentRow.classList.remove('swiped-left');
+          } else {
+            swipeCurrentRow.style.transform = '';
+            swipeCurrentRow.classList.remove('swiped-left');
+          }
+        }, 200);
+      }
+    } else if (swipeDirection === 'right' && translateX > 40) {
+      // 右滑：查看详情
+      const secid = swipeCurrentRow.getAttribute('data-secid');
+      if (secid) {
+        showStockDetail(secid);
+      }
+      swipeCurrentRow.style.transform = '';
+    } else {
+      swipeCurrentRow.style.transform = '';
+    }
+  } else {
+    swipeCurrentRow.style.transform = '';
+  }
+  
+  swipeCurrentRow = null;
+  isSwiping = false;
+}
+
+// 显示手势提示
+function showSwipeHint() {
+  const hint = document.getElementById('swipeHint');
+  if (hint) {
+    hint.classList.add('show');
+    setTimeout(() => hint.classList.remove('show'), 3000);
+  }
+}
+
 // 下拉刷新功能
 let touchStartY = 0;
 let isPulling = false;
@@ -2898,6 +3058,11 @@ function updateTrendFilterUI() {
 
 // 板块筛选点击事件
 document.addEventListener('DOMContentLoaded', function() {
+  // 首次加载显示手势提示
+  if (!localStorage.getItem('astock_swipe_hint_shown')) {
+    setTimeout(showSwipeHint, 2000);
+    localStorage.setItem('astock_swipe_hint_shown', '1');
+  }
   const filterBar = document.getElementById('sectorFilter');
   if (filterBar) {
     filterBar.addEventListener('click', function(e) {
@@ -3228,6 +3393,9 @@ function renderData(diff) {
     return { stock, rt: d || null, cond: { count: -1, conditions: [] } };
   });
   renderAnomalies([...stockData, ...usStockData, ...cnStockData], dataMap);
+  
+  // 初始化移动端手势操作
+  setTimeout(initSwipeGestures, 300);
 }
 
 function renderUSStocks(dataMap) {
