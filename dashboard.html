@@ -407,61 +407,131 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
 @media (max-width: 768px) {
-  .index-cards { grid-template-columns: repeat(2, 1fr); }
-  .container { padding: 10px 12px; padding-bottom: 80px; }
-  .stock-table { font-size: 11px; }
-  .stock-table th, .stock-table td { padding: 5px 6px; }
+  /* 全局优化 */
+  * { -webkit-tap-highlight-color: transparent; }
+  body { -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; }
+  
+  .index-cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .container { padding: 12px 14px; padding-bottom: 90px; }
+  
+  /* 表格优化 - 增大行高提升触摸体验 */
+  .stock-table { font-size: 12px; }
+  .stock-table th, .stock-table td { padding: 8px 6px; }
+  .stock-table tr { min-height: 44px; }
+  .stock-table tbody tr { border-bottom: 1px solid var(--border); }
+  .stock-table tbody tr:active { background: rgba(139,92,246,0.08); }
+  
   .hide-mobile { display: none; }
-  .section-title { font-size: 13px; }
-  .header h1 { font-size: 18px; }
-  .quick-filter { flex-wrap: wrap; gap: 6px; }
-  .quick-filter-tag { font-size: 11px; padding: 5px 10px; }
-  .sector-filter { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; padding-bottom: 4px; }
-  .sector-tag { white-space: nowrap; font-size: 11px; padding: 4px 10px; }
+  .section-title { font-size: 14px; margin: 16px 0 10px; }
+  .header { padding: 14px 0; }
+  .header h1 { font-size: 19px; }
+  
+  /* 按钮和标签优化 - 增大触摸目标 */
+  .quick-filter { flex-wrap: wrap; gap: 8px; }
+  .quick-filter-tag { font-size: 12px; padding: 7px 14px; border-radius: 16px; min-height: 36px; display: inline-flex; align-items: center; }
+  
+  .sector-filter { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; padding-bottom: 6px; gap: 8px; }
+  .sector-tag { white-space: nowrap; font-size: 12px; padding: 6px 14px; border-radius: 16px; min-height: 32px; }
+  
   .stock-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .anomaly-panel { font-size: 11px; }
-  .env-grid { grid-template-columns: repeat(2, 1fr); }
-  .market-env-panel { padding: 12px; }
-  .sector-rank-panel { margin-bottom: 12px; }
-  .capital-flow-panel { margin-bottom: 12px; }
-  /* 移动端返回按钮 */
+  .anomaly-panel { font-size: 12px; padding: 12px; }
+  
+  .env-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .market-env-panel { padding: 14px; margin-bottom: 14px; }
+  .sector-rank-panel { margin-bottom: 14px; padding: 14px; }
+  .capital-flow-panel { margin-bottom: 14px; padding: 14px; }
+  
+  /* 股票名称和代码优化 */
+  .stock-name { font-size: 13px; font-weight: 600; }
+  .stock-code { font-size: 11px; color: var(--text-sec); }
+  
+  /* 评分和标签优化 */
+  .score-badge { font-size: 13px; min-width: 32px; height: 32px; line-height: 32px; }
+  .risk-tag { font-size: 10px; padding: 2px 6px; margin: 1px; }
+  .star-btn { font-size: 18px; padding: 4px; }
+  .compare-add-btn { font-size: 11px; padding: 4px 8px; border-radius: 4px; min-height: 28px; }
+  
+  /* 移动端返回按钮 - 增大触摸区域 */
   .mobile-back-btn {
     position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 12px;
-    width: 38px; height: 38px; border-radius: 50%;
+    width: 42px; height: 42px; border-radius: 50%;
     background: rgba(26,31,46,0.95); backdrop-filter: blur(10px);
     border: 1px solid var(--border); color: var(--text);
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px; z-index: 998; cursor: pointer;
+    font-size: 20px; z-index: 998; cursor: pointer;
     box-shadow: 0 2px 12px rgba(0,0,0,0.3);
   }
-  /* 移动端底部导航 */
+  
+  /* 移动端底部导航 - 增大触摸区域 */
   .mobile-bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: rgba(26,31,46,0.95); backdrop-filter: blur(20px);
     border-top: 1px solid var(--border);
     display: flex; justify-content: space-around;
-    padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px));
     z-index: 997;
   }
   .mobile-nav-item {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    padding: 4px 12px; color: var(--text-sec); text-decoration: none;
-    font-size: 10px; font-weight: 600;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 16px; color: var(--text-sec); text-decoration: none;
+    font-size: 11px; font-weight: 600; min-width: 60px; min-height: 48px;
+    justify-content: center;
   }
-  .mobile-nav-item .icon { font-size: 20px; }
+  .mobile-nav-item .icon { font-size: 22px; }
   .mobile-nav-item.active { color: var(--accent); }
+  
+  /* 悬浮按钮优化 */
+  .wechat-float-btn {
+    width: 48px; height: 48px; font-size: 22px;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* 搜索框优化 */
+  .search-box { padding: 10px 14px; font-size: 14px; border-radius: 20px; }
+  
+  /* 工具栏按钮优化 */
+  .copy-btn, .history-btn, .compare-btn { padding: 8px 14px; font-size: 12px; min-height: 36px; border-radius: 18px; }
+  
+  /* 指标卡片优化 */
+  .index-card { padding: 12px; }
+  .index-card .name { font-size: 12px; }
+  .index-card .price { font-size: 16px; font-weight: 700; }
+  .index-card .change { font-size: 13px; }
+  
+  /* 异常面板优化 */
+  .anomaly-item { padding: 10px; margin-bottom: 8px; font-size: 12px; }
+  
+  /* 滚动条隐藏（移动端更美观） */
+  .sector-filter::-webkit-scrollbar { display: none; }
+  .stock-table-wrap::-webkit-scrollbar { display: none; }
 }
 
 @media (max-width: 480px) {
-  .stock-table { font-size: 10px; }
-  .stock-table th, .stock-table td { padding: 4px 4px; }
-  .index-card { padding: 10px 8px; }
+  .stock-table { font-size: 11px; }
+  .stock-table th, .stock-table td { padding: 6px 5px; }
+  .stock-name { font-size: 12px; }
+  .stock-code { font-size: 10px; }
+  .index-cards { gap: 8px; }
+  .index-card { padding: 10px; }
   .index-card .name { font-size: 11px; }
-  .index-card .price { font-size: 14px; }
-  .header { padding: 12px 0; }
-  .header h1 { font-size: 16px; }
-  .search-box { width: 100%; margin-bottom: 8px; }
-  .header-controls { flex-wrap: wrap; gap: 8px; }
+  .index-card .price { font-size: 15px; }
+  .index-card .change { font-size: 12px; }
+  .header { padding: 10px 0; }
+  .header h1 { font-size: 17px; }
+  .container { padding: 10px 10px; padding-bottom: 90px; }
+  .search-box { width: 100%; margin-bottom: 10px; font-size: 13px; padding: 9px 12px; }
+  .header-controls { flex-wrap: wrap; gap: 6px; }
+  .copy-btn, .history-btn, .compare-btn { padding: 7px 12px; font-size: 11px; }
+  .section-title { font-size: 13px; }
+  .quick-filter-tag { font-size: 11px; padding: 6px 12px; }
+  .sector-tag { font-size: 11px; padding: 5px 12px; }
+  .risk-tag { font-size: 9px; padding: 1px 5px; }
+  .score-badge { font-size: 12px; min-width: 28px; height: 28px; line-height: 28px; }
+  .mobile-nav-item { font-size: 10px; min-width: 50px; padding: 5px 12px; }
+  .mobile-nav-item .icon { font-size: 20px; }
+  .market-env-panel, .sector-rank-panel, .capital-flow-panel { padding: 12px; }
+  .anomaly-panel { font-size: 11px; padding: 10px; }
+  .anomaly-item { padding: 8px; font-size: 11px; }
 }
 
 /* Stock Detail Modal */
