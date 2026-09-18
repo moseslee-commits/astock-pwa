@@ -133,24 +133,6 @@ body {
   animation: toastIn 0.3s ease;
 }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
-
-/* 移动端适配 */
-.mobile-back-btn, .mobile-bottom-nav { display: none; }
-@media (max-width: 768px) {
-  .mobile-back-btn, .mobile-bottom-nav { display: flex !important; }
-  .main-layout { flex-direction: column; gap: 12px; }
-  .filter-panel {
-    width: 100%; position: static; padding: 12px;
-  }
-  .result-panel { width: 100%; }
-  .strategy-cards { flex-wrap: wrap; }
-  .strategy-card { min-width: calc(50% - 4px); }
-  .container { padding: 12px; }
-  .header h1 { font-size: 18px; }
-  .stock-item { padding: 10px; }
-  .stock-name { font-size: 14px; }
-  .filter-select, .filter-input { font-size: 14px; padding: 10px; }
-}
 </style>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0e1217">
