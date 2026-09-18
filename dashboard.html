@@ -310,6 +310,72 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 .capital-flow-value.inflow { color: #ff4d4f; }
 .capital-flow-value.outflow { color: #52c41a; }
 .capital-flow-pct { font-size: 11px; color: var(--text-sec); margin-left: 8px; }
+
+/* 资金流向热力图 */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.heatmap-cell {
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  position: relative;
+  overflow: hidden;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.heatmap-cell:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  z-index: 2;
+}
+.heatmap-cell .hm-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  margin-bottom: 4px;
+}
+.heatmap-cell .hm-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  font-family: Consolas, monospace;
+}
+.heatmap-cell .hm-pct {
+  font-size: 10px;
+  color: rgba(255,255,255,0.85);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  margin-top: 2px;
+}
+.heatmap-legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-sec);
+}
+.heatmap-legend .lg-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.heatmap-legend .lg-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
 .capital-flow-bar { height: 3px; background: rgba(42,49,66,0.5); border-radius: 2px; margin-top: 4px; overflow: hidden; }
 .capital-flow-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
 .index-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; transition: border-color 0.2s; }
@@ -440,6 +506,10 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   .market-env-panel { padding: 14px; margin-bottom: 14px; }
   .sector-rank-panel { margin-bottom: 14px; padding: 14px; }
   .capital-flow-panel { margin-bottom: 14px; padding: 14px; }
+  .heatmap-grid { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .heatmap-cell { min-height: 50px; padding: 8px 4px; }
+  .heatmap-cell .hm-name { font-size: 11px; }
+  .heatmap-cell .hm-value { font-size: 12px; }
   
   /* 股票名称和代码优化 */
   .stock-name { font-size: 13px; font-weight: 600; }
@@ -3783,33 +3853,52 @@ function renderCapitalFlow(data) {
   const container = document.getElementById('capitalFlowList');
   if (!container || !data || data.length === 0) return;
 
-  const maxInflow = Math.max(...data.map(d => Math.abs(d.f62 || 0)), 1);
-  const html = data.slice(0, 10).map(item => {
+  // 热力图：取前15个板块，按资金流入流出强度着色
+  const top = data.slice(0, 15);
+  const maxAbs = Math.max(...top.map(d => Math.abs(d.f62 || 0)), 1);
+  
+  let html = '<div class="heatmap-grid">';
+  top.forEach(item => {
     const name = item.f14 || '';
     const inflow = item.f62 || 0;
     const pct = item.f3 || 0;
-    const isInflow = inflow >= 0;
+    const intensity = Math.abs(inflow) / maxAbs;  // 0~1
+    
+    // 红色系=流入，绿色系=流出，深浅=强度
+    let bgColor;
+    if (inflow >= 0) {
+      // 红色：浅红到深红
+      const alpha = 0.15 + intensity * 0.75;
+      bgColor = `rgba(255, 77, 79, ${alpha})`;
+    } else {
+      // 绿色：浅绿到深绿
+      const alpha = 0.15 + intensity * 0.75;
+      bgColor = `rgba(82, 196, 26, ${alpha})`;
+    }
+    
     const valueStr = Math.abs(inflow) >= 100000000 ?
-      (inflow / 100000000).toFixed(2) + '亿' :
+      (inflow / 100000000).toFixed(1) + '亿' :
       (inflow / 10000).toFixed(0) + '万';
-    const barWidth = Math.min(Math.abs(inflow) / maxInflow * 100, 100);
-    const barColor = isInflow ? '#ff4d4f' : '#52c41a';
-    return `<div class="capital-flow-item">
-      <div style="flex:1">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span class="capital-flow-name">${name}</span>
-          <span>
-            <span class="capital-flow-value ${isInflow ? 'inflow' : 'outflow'}">${isInflow ? '+' : '-'}${valueStr}</span>
-            <span class="capital-flow-pct">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span>
-          </span>
-        </div>
-        <div class="capital-flow-bar"><div class="capital-flow-bar-fill" style="width:${barWidth}%;background:${barColor}"></div></div>
-      </div>
+    
+    html += `<div class="heatmap-cell" style="background:${bgColor}" title="${name} 主力净流入${valueStr} 涨跌幅${pct.toFixed(2)}%">
+      <div class="hm-name">${name}</div>
+      <div class="hm-value">${isInflowVal(inflow) ? '+' : ''}${valueStr}</div>
+      <div class="hm-pct">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
     </div>`;
-  }).join('');
-
+  });
+  html += '</div>';
+  
+  // 图例
+  html += `<div class="heatmap-legend">
+    <div class="lg-item"><div class="lg-dot" style="background:rgba(255,77,79,0.8)"></div>主力流入</div>
+    <div class="lg-item"><div class="lg-dot" style="background:rgba(82,196,26,0.8)"></div>主力流出</div>
+    <div class="lg-item">颜色深浅=资金强度</div>
+  </div>`;
+  
   container.innerHTML = html;
 }
+
+function isInflowVal(v) { return v >= 0; }
 
 function startKlineRefresh() {
   if (klineTimer) clearInterval(klineTimer);
