@@ -69,41 +69,40 @@ body {
   .result-table-wrap { display: none; }
   .mobile-result-cards { display: block; }
   
+  /* 同花顺风格紧凑列表 */
   .mobile-pick-card {
-    background: var(--bg-sec); border: 1px solid var(--border);
-    border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
-    cursor: pointer; transition: border-color 0.15s;
+    background: var(--bg-sec); border-bottom: 1px solid var(--border);
+    padding: 12px 14px; margin-bottom: 0;
+    cursor: pointer; transition: background 0.1s;
+    display: flex; align-items: center;
+    min-height: 56px;
   }
-  .mobile-pick-card:active { border-color: var(--accent); }
-  .mpc-top {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 8px;
+  .mobile-pick-card:active { background: var(--bg-ter); }
+  .mpc-left { flex: 1; min-width: 0; }
+  .mpc-name-row { display: flex; align-items: baseline; gap: 6px; }
+  .mpc-name { font-size: 15px; font-weight: 600; color: var(--text); }
+  .mpc-code { font-size: 11px; color: var(--text-sec); }
+  .mpc-sector { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+  .mpc-right { text-align: right; flex-shrink: 0; margin-left: 12px; }
+  .mpc-price { font-size: 18px; font-weight: 700; font-family: Consolas, monospace; line-height: 1.2; }
+  .mpc-change { font-size: 12px; font-weight: 600; font-family: Consolas, monospace; }
+  .mpc-change.up { color: #ff4d4f; }
+  .mpc-change.down { color: #00b578; }
+  .mpc-change.flat { color: var(--text-sec); }
+  .mpc-tags { display: flex; gap: 4px; margin-top: 4px; }
+  .mpc-tag {
+    font-size: 10px; padding: 1px 5px; border-radius: 3px;
+    background: rgba(255,77,79,0.15); color: #ff4d4f;
   }
-  .mpc-name { font-size: 15px; font-weight: 700; }
-  .mpc-code { font-size: 11px; color: var(--text-sec); margin-left: 6px; font-weight: 400; }
-  .mpc-price-block { text-align: right; }
-  .mpc-price { font-size: 18px; font-weight: 700; font-family: Consolas, monospace; }
-  .mpc-change { font-size: 13px; font-weight: 600; font-family: Consolas, monospace; }
-  .mpc-change.up { color: var(--up); }
-  .mpc-change.down { color: var(--down); }
-  .mpc-meta {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 11px; color: var(--text-sec); margin-top: 8px;
+  .mpc-tag.green { background: rgba(0,181,120,0.15); color: #00b578; }
+  .mpc-tag.blue { background: rgba(22,119,255,0.15); color: #1677ff; }
+  .mpc-score-badge {
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    font-size: 10px; font-weight: 600; margin-left: 6px;
   }
-  .mpc-meta-item { text-align: center; flex: 1; }
-  .mpc-meta-label { font-size: 10px; margin-bottom: 2px; }
-  .mpc-meta-value { font-size: 12px; font-weight: 600; color: var(--text); }
-  .mpc-score {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; border-radius: 8px;
-    font-size: 13px; font-weight: 700; color: #fff;
-  }
-  .mpc-score.high { background: #52c41a; }
-  .mpc-score.mid { background: #f59e0b; }
-  .mpc-score.low { background: #6b7280; }
-  .mpc-reasons { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
-  .mpc-actions { margin-top: 8px; display: flex; gap: 8px; }
-  .mpc-actions button { flex: 1; padding: 8px; font-size: 12px; }
+  .mpc-score-badge.high { background: rgba(82,196,26,0.2); color: #52c41a; }
+  .mpc-score-badge.mid { background: rgba(250,173,20,0.2); color: #faad14; }
+  .mpc-score-badge.low { background: var(--bg-ter); color: var(--text-sec); }
   
   /* 筛选遮罩 */
   .filter-overlay {
@@ -448,47 +447,41 @@ function toggleFilter() {
   overlay.classList.toggle('show');
 }
 
-// 移动端卡片渲染
+// 移动端卡片渲染（同花顺风格）
 function renderMobileCards(data) {
   const container = document.getElementById('mobileResultCards');
   if (!container) return;
   
-  let html = '';
+  let html = '<div style="background:var(--bg-sec);border:1px solid var(--border);border-radius:10px;overflow:hidden">';
   data.slice(0, 50).forEach(item => {
     const pct = item.f3 ? Number(item.f3) / 100 : 0;
     const price = item.f2 ? Number(item.f2) / 100 : 0;
-    const turnover = item.f8 ? Number(item.f8) / 100 : 0;
-    const volRatio = item.f10 ? Number(item.f10) / 100 : 0;
-    const changeClass = pct >= 0 ? 'up' : 'down';
+    const changeClass = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
     const scoreClass = item.score >= 75 ? 'high' : item.score >= 60 ? 'mid' : 'low';
     
-    const reasons = [];
-    if (item.score >= 75) reasons.push('高分');
-    if (item.pe > 0 && item.pe < 15) reasons.push('低PE');
-    if (pct > -3 && pct < 0) reasons.push('回踩');
-    if (volRatio >= 1 && volRatio <= 2) reasons.push('放量');
+    // 标签
+    let tags = '';
+    if (item.score >= 75) tags += '<span class="mpc-tag">高分</span>';
+    if (item.pe > 0 && item.pe < 15) tags += '<span class="mpc-tag green">低PE</span>';
+    if (pct > -2 && pct < 0) tags += '<span class="mpc-tag blue">回踩</span>';
     
     html += `<div class="mobile-pick-card" onclick="viewDetail('${item.stock.code}')">
-      <div class="mpc-top">
-        <div><span class="mpc-name">${item.stock.name}</span><span class="mpc-code">${item.stock.code}</span></div>
-        <div class="mpc-price-block">
-          <div class="mpc-price">${price.toFixed(2)}</div>
-          <div class="mpc-change ${changeClass}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
+      <div class="mpc-left">
+        <div class="mpc-name-row">
+          <span class="mpc-name">${item.stock.name}</span>
+          <span class="mpc-code">${item.stock.code}</span>
+          <span class="mpc-score-badge ${scoreClass}">${item.score}分</span>
         </div>
+        <div class="mpc-sector">${item.stock.sector} · PE ${item.pe > 0 ? item.pe.toFixed(1) : '--'}</div>
+        ${tags ? `<div class="mpc-tags">${tags}</div>` : ''}
       </div>
-      <div class="mpc-meta">
-        <div class="mpc-meta-item"><span class="mpc-meta-label">评分</span><br><span class="mpc-score ${scoreClass}">${item.score}</span></div>
-        <div class="mpc-meta-item"><span class="mpc-meta-label">换手率</span><br><span class="mpc-meta-value">${turnover > 0 ? turnover.toFixed(1)+'%' : '--'}</span></div>
-        <div class="mpc-meta-item"><span class="mpc-meta-label">量比</span><br><span class="mpc-meta-value">${volRatio > 0 ? volRatio.toFixed(2) : '--'}</span></div>
-        <div class="mpc-meta-item"><span class="mpc-meta-label">PE</span><br><span class="mpc-meta-value">${item.pe > 0 ? item.pe.toFixed(1) : '--'}</span></div>
-      </div>
-      <div class="mpc-reasons">${reasons.map(r => `<span class="reason-tag">${r}</span>`).join('')}</div>
-      <div class="mpc-actions">
-        <button class="btn btn-secondary" onclick="event.stopPropagation();viewDetail('${item.stock.code}')">详情</button>
-        <button class="btn btn-primary" onclick="event.stopPropagation();addFavorite('${item.stock.code}','${item.stock.name}')">+自选</button>
+      <div class="mpc-right">
+        <div class="mpc-price">${price.toFixed(2)}</div>
+        <div class="mpc-change ${changeClass}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
       </div>
     </div>`;
   });
+  html += '</div>';
   
   if (data.length > 50) {
     html += `<div style="text-align:center;padding:12px;color:var(--text-sec);font-size:12px">仅显示前50只，共${data.length}只符合</div>`;
