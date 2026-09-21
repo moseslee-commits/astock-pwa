@@ -156,83 +156,38 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   .stock-table-wrap { display: none; }
   .mobile-stock-list { display: block; }
 }
+.mobile-stock-list { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
 .mobile-stock-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 14px;
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: border-color 0.15s;
+  display: flex; align-items: center; padding: 10px 14px;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+  min-height: 56px; transition: background 0.1s;
 }
-.mobile-stock-card:active { border-color: var(--accent); }
-.msc-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+.mobile-stock-card:last-child { border-bottom: none; }
+.mobile-stock-card:active { background: var(--card-hover, rgba(255,255,255,0.05)); }
+.msc-left { flex: 1; min-width: 0; }
+.msc-name-row { display: flex; align-items: baseline; gap: 6px; }
+.msc-name { font-size: 15px; font-weight: 600; color: var(--text); }
+.msc-code { font-size: 11px; color: var(--text-sec); }
+.msc-score-badge {
+  font-size: 10px; padding: 1px 6px; border-radius: 8px; font-weight: 600;
 }
-.msc-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-.msc-code {
-  font-size: 11px;
-  color: var(--text-sec);
-  margin-left: 6px;
-  font-weight: 400;
-}
-.msc-price-block {
-  text-align: right;
-}
-.msc-price {
-  font-size: 18px;
-  font-weight: 700;
-  font-family: Consolas, monospace;
-}
-.msc-change {
-  font-size: 13px;
-  font-weight: 600;
-  font-family: Consolas, monospace;
-}
+.msc-score-badge.high { background: rgba(82,196,26,0.2); color: #52c41a; }
+.msc-score-badge.mid { background: rgba(250,173,20,0.2); color: #faad14; }
+.msc-score-badge.low { background: var(--card); color: var(--text-sec); }
+.msc-sub { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+.msc-right { text-align: right; flex-shrink: 0; margin-left: 12px; }
+.msc-price { font-size: 18px; font-weight: 700; font-family: Consolas, monospace; line-height: 1.2; }
+.msc-change { font-size: 12px; font-weight: 600; font-family: Consolas, monospace; }
 .msc-change.up { color: #ff4d4f; }
-.msc-change.down { color: #52c41a; }
-.msc-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-  color: var(--text-sec);
+.msc-change.down { color: #00b578; }
+.msc-change.flat { color: var(--text-sec); }
+.msc-tags { display: flex; gap: 4px; margin-top: 4px; }
+.msc-tag {
+  font-size: 10px; padding: 1px 5px; border-radius: 3px;
+  background: rgba(255,77,79,0.15); color: #ff4d4f;
 }
-.msc-meta-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-}
-.msc-meta-label { font-size: 10px; margin-bottom: 2px; }
-.msc-meta-value { font-size: 12px; font-weight: 600; font-family: Consolas, monospace; color: var(--text); }
-.msc-tags {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.msc-score {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-}
-.msc-score.high { background: #52c41a; }
-.msc-score.mid { background: #f59e0b; }
-.msc-score.low { background: #6b7280; }
+.msc-tag.green { background: rgba(0,181,120,0.15); color: #00b578; }
+.msc-tag.blue { background: rgba(22,119,255,0.15); color: #1677ff; }
 
 /* 下拉刷新 */
 .pull-refresh {
@@ -1042,11 +997,12 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 <!-- 移动端返回按钮 -->
 <div class="mobile-back-btn" onclick="history.back()" style="display:none">←</div>
 <!-- 移动端底部导航 -->
-<div class="mobile-bottom-nav">
-  <a class="mobile-nav-item" href="./dashboard.html"><span class="icon">📊</span>看板</a>
+<div class="mobile-bottom-nav" style="display:none">
+  <a class="mobile-nav-item" href="./mobile.html"><span class="icon">🏠</span>首页</a>
+  <a class="mobile-nav-item active" href="./dashboard.html"><span class="icon">📊</span>看板</a>
   <a class="mobile-nav-item" href="./stock-picker.html"><span class="icon">🎯</span>选股</a>
   <a class="mobile-nav-item" href="./portfolio.html"><span class="icon">💼</span>持仓</a>
-  <a class="mobile-nav-item" href="./mobile.html"><span class="icon">👤</span>我的</a>
+  <a class="mobile-nav-item" href="./price-alert.html"><span class="icon">🔔</span>预警</a>
 </div>
 <script>
 // 手势操作功能
@@ -3940,25 +3896,22 @@ function renderMobileStockCards(stockData) {
   const container = document.getElementById('mobileStockList');
   if (!container) return;
   
-  // 过滤有数据的股票，按涨跌幅排序
   const valid = stockData.filter(s => s.rt && s.rt.f3 !== undefined);
   valid.sort((a, b) => (Number(b.rt.f3) || 0) - (Number(a.rt.f3) || 0));
   
   let html = '';
-  valid.slice(0, 30).forEach(s => {
+  valid.slice(0, 50).forEach(s => {
     const d = s.rt;
     const stock = s.stock;
     const price = Number(d.f2 || 0);
     const pct = Number(d.f3 || 0);
-    const vol = Number(d.f5 || 0);
-    const amt = Number(d.f6 || 0);
     const turnover = Number(d.f8 || 0);
     const vRatio = Number(d.f10 || 0) / 100;
+    const vol = Number(d.f5 || 0);
     
-    const changeClass = pct > 0 ? 'up' : pct < 0 ? 'down' : '';
+    const changeClass = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
     const changeStr = (pct > 0 ? '+' : '') + pct.toFixed(2) + '%';
     
-    // 评分
     let scoreVal = '--', scoreClass = 'low';
     if (s.cond && s.cond.count >= 0) {
       scoreVal = s.cond.count;
@@ -3966,29 +3919,26 @@ function renderMobileStockCards(stockData) {
       else if (scoreVal >= 55) scoreClass = 'mid';
     }
     
-    // 格式化成交量
     const volStr = vol >= 100000000 ? (vol/100000000).toFixed(1) + '亿' : vol >= 10000 ? (vol/10000).toFixed(0) + '万' : vol;
     
-    // 标签
     let tags = '';
-    if (vRatio >= 3) tags += '<span class="risk-tag" style="background:#fff1f0;color:#f5222d">巨量</span>';
-    else if (vRatio >= 2) tags += '<span class="risk-tag" style="background:#fff7e6;color:#fa8c16">放量</span>';
+    if (vRatio >= 3) tags += '<span class="msc-tag">巨量</span>';
+    else if (vRatio >= 2) tags += '<span class="msc-tag green">放量</span>';
     
     html += `<div class="mobile-stock-card" onclick="showStockDetail('${stock.secid}')">
-      <div class="msc-top">
-        <div><span class="msc-name">${stock.name}</span><span class="msc-code">${stock.secid.split('.')[1]}</span></div>
-        <div class="msc-price-block">
-          <div class="msc-price">${price.toFixed(2)}</div>
-          <div class="msc-change ${changeClass}">${changeStr}</div>
+      <div class="msc-left">
+        <div class="msc-name-row">
+          <span class="msc-name">${stock.name}</span>
+          <span class="msc-code">${stock.secid.split('.')[1]}</span>
+          <span class="msc-score-badge ${scoreClass}">${scoreVal}分</span>
         </div>
+        <div class="msc-sub">换手${turnover.toFixed(1)}% · 量比${vRatio.toFixed(2)} · ${volStr}</div>
+        ${tags ? `<div class="msc-tags">${tags}</div>` : ''}
       </div>
-      <div class="msc-meta">
-        <div class="msc-meta-item"><span class="msc-meta-label">成交量</span><span class="msc-meta-value">${volStr}</span></div>
-        <div class="msc-meta-item"><span class="msc-meta-label">换手率</span><span class="msc-meta-value">${turnover.toFixed(1)}%</span></div>
-        <div class="msc-meta-item"><span class="msc-meta-label">量比</span><span class="msc-meta-value">${vRatio.toFixed(2)}</span></div>
-        <div class="msc-meta-item"><span class="msc-meta-label">评分</span><span class="msc-score ${scoreClass}">${scoreVal}</span></div>
+      <div class="msc-right">
+        <div class="msc-price">${price.toFixed(2)}</div>
+        <div class="msc-change ${changeClass}">${changeStr}</div>
       </div>
-      <div class="msc-tags">${tags}</div>
     </div>`;
   });
   
