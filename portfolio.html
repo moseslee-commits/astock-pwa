@@ -26,7 +26,38 @@ body {
     --accent: #6366f1;
     --accent-light: rgba(99, 102, 241, 0.15);
 }
-.container { max-width: 1200px; margin: 0 auto; padding: 20px 24px 40px; }
+.container { max-width: 1200px; margin: 0 auto; padding: 20px 24px 40px; padding-bottom: 90px; }
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .container { padding: 12px; }
+  .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .asset-overview { padding: 16px; }
+  .asset-total .value { font-size: 28px; }
+  .asset-details { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .chart-row { grid-template-columns: 1fr; }
+  
+  /* 持仓表格改卡片 */
+  .position-table { display: none; }
+  .mobile-positions { display: block; }
+  
+  .pos-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .pos-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .pos-name { font-size: 15px; font-weight: 600; }
+  .pos-code { font-size: 11px; color: var(--text-sec); margin-left: 6px; }
+  .pos-pnl { font-size: 16px; font-weight: 700; font-family: Consolas, monospace; }
+  .pos-pnl.up { color: var(--up); }
+  .pos-pnl.down { color: var(--down); }
+  .pos-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-sec); }
+  .pos-meta-item { text-align: center; }
+  .pos-meta-val { font-size: 12px; color: var(--text); font-weight: 600; margin-top: 2px; }
+  .pos-actions { margin-top: 8px; display: flex; gap: 8px; }
+  .pos-actions .btn { flex: 1; padding: 6px; font-size: 12px; }
+}
+.mobile-positions { display: none; }
 .header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 16px 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 20px;
@@ -206,6 +237,8 @@ tr:hover { background: rgba(99,102,241,0.05); }
                 </tr>
             </thead>
             <tbody id="positionBody"></tbody>
+                </table>
+                <div class="mobile-positions" id="mobilePositions"></div>
         </table>
         <div class="empty-state" id="positionEmpty" style="display:none">
             <div class="icon">📊</div>
