@@ -34,6 +34,12 @@ body {
 .stat-value.up { color: var(--up); }
 .stat-value.down { color: var(--down); }
 .main-layout { display: flex; gap: 16px; }
+@media (max-width: 768px) {
+  .main-layout { flex-direction: column; }
+  .filter-panel { width: 100%; position: static; }
+  .result-table { font-size: 11px; }
+  .result-table th, .result-table td { padding: 8px 6px; }
+}
 .filter-panel {
   width: 260px; flex-shrink: 0; background: var(--bg-sec);
   border-radius: 12px; padding: 16px; border: 1px solid var(--border);
@@ -249,10 +255,41 @@ body {
     </div>
 
     <div class="filter-section">
+      <div class="filter-title">📊 行情条件</div>
+      <div class="filter-row">
+        <div class="filter-label">今日涨跌幅(%)</div>
+        <div class="range-row">
+          <input type="number" class="filter-input" id="minChange" placeholder="最低" value="-10">
+          <span class="range-sep">~</span>
+          <input type="number" class="filter-input" id="maxChange" placeholder="最高" value="10">
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="filter-label">换手率≥(%)</div>
+        <input type="number" class="filter-input" id="minTurnover" placeholder="0" value="0" step="0.1">
+      </div>
+      <div class="filter-row">
+        <div class="filter-label">量比≥</div>
+        <input type="number" class="filter-input" id="minVolumeRatio" placeholder="0" value="0" step="0.1">
+      </div>
+    </div>
+
+    <div class="filter-section">
       <div class="filter-title">⚠️ 风险排除</div>
       <div class="checkbox-group">
         <label class="checkbox-item active"><input type="checkbox" value="noST" checked>排除ST</label>
         <label class="checkbox-item active"><input type="checkbox" value="noHighPE" checked>排除高PE(>80)</label>
+      </div>
+    </div>
+
+    <!-- 快捷预设 -->
+    <div class="filter-section">
+      <div class="filter-title">⚡ 快捷预设</div>
+      <div class="checkbox-group" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <label class="checkbox-item" onclick="applyPreset('highScore')">🏆 高分优选</label>
+        <label class="checkbox-item" onclick="applyPreset('lowPE')">💰 低估值</label>
+        <label class="checkbox-item" onclick="applyPreset('techBreak')">📈 技术突破</label>
+        <label class="checkbox-item" onclick="applyPreset('hotSector')">🔥 热门板块</label>
       </div>
     </div>
 
@@ -322,6 +359,30 @@ const watchlist = [
 
 // 去重
 const uniqueStocks = [...new Map(watchlist.map(s => [s.code, s])).values()];
+
+// 快捷预设
+function applyPreset(type) {
+  if (type === 'highScore') {
+    document.getElementById('minScore').value = 60;
+    document.getElementById('minFundamental').value = 50;
+    document.getElementById('minTechnical').value = 50;
+    document.getElementById('maxPE').value = 80;
+  } else if (type === 'lowPE') {
+    document.getElementById('minScore').value = 0;
+    document.getElementById('maxPE').value = 30;
+    document.getElementById('maxPEPct').value = 30;
+  } else if (type === 'techBreak') {
+    document.getElementById('minScore').value = 55;
+    document.getElementById('minTechnical').value = 60;
+    document.getElementById('minVolumeRatio').value = 1.5;
+    document.getElementById('minChange').value = 0;
+  } else if (type === 'hotSector') {
+    document.getElementById('minScore').value = 55;
+    document.getElementById('minChange').value = 1;
+    document.getElementById('minVolumeRatio').value = 1.2;
+  }
+  runScreening();
+}
 let allData = [];
 let currentStrategy = 'balanced';
 
@@ -503,6 +564,7 @@ function renderResults(data) {
   let html = '<table class="result-table"><thead><tr>';
   html += '<th>代码</th><th>名称</th><th>板块</th>';
   html += '<th class="nums">评分</th><th class="nums">现价</th><th class="nums">涨跌幅</th>';
+  html += '<th class="nums">换手率</th><th class="nums">量比</th>';
   html += '<th class="nums">PE</th><th>选股理由</th><th>操作</th>';
   html += '</tr></thead><tbody>';
 
@@ -525,6 +587,10 @@ function renderResults(data) {
     html += `<td class="nums"><span class="score-badge ${scoreClass}">${item.score}</span></td>`;
     html += `<td class="nums">${price.toFixed(2)}</td>`;
     html += `<td class="nums" style="color:${pct >= 0 ? 'var(--up)' : 'var(--down)'}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</td>`;
+    const turnover = item.f8 ? Number(item.f8) / 100 : 0;
+    const volRatio = item.f10 ? Number(item.f10) / 100 : 0;
+    html += `<td class="nums">${turnover > 0 ? turnover.toFixed(2) + '%' : '--'}</td>`;
+    html += `<td class="nums">${volRatio > 0 ? volRatio.toFixed(2) : '--'}</td>`;
     html += `<td class="nums">${item.pe > 0 ? item.pe.toFixed(1) : '--'}</td>`;
     html += `<td><div class="reason-tags">${reasons.map(r => `<span class="reason-tag">${r}</span>`).join('')}</div></td>`;
     html += `<td style="white-space:nowrap">
