@@ -612,12 +612,11 @@ setInterval(refreshPrices, 30000);
 </script>
 
 <!-- 移动端底部导航 -->
-<div class="mobile-bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(26,31,46,0.95);backdrop-filter:blur(20px);border-top:1px solid #2a3142;display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom,0px));z-index:997;">
-  <a class="mobile-nav-item" href="./mobile.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🏠</span>首页</a>
-  <a class="mobile-nav-item" href="./dashboard.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">📊</span>看板</a>
-  <a class="mobile-nav-item" href="./stock-picker.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🎯</span>选股</a>
-  <a class="mobile-nav-item" href="./portfolio.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">💼</span>持仓</a>
-  <a class="mobile-nav-item" href="./price-alert.html" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;color:#8b95a7;text-decoration:none;font-size:10px;font-weight:600;"><span style="font-size:20px">🔔</span>预警</a>
+<div class="mobile-bottom-nav">
+  <a class="mobile-nav-item" href="./dashboard.html"><span class="icon">📊</span>看板</a>
+  <a class="mobile-nav-item" href="./stock-picker.html"><span class="icon">🎯</span>选股</a>
+  <a class="mobile-nav-item" href="./portfolio.html"><span class="icon">💼</span>持仓</a>
+  <a class="mobile-nav-item" href="./mobile.html"><span class="icon">👤</span>我的</a>
 </div>
 <script>
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {

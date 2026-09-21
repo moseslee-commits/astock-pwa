@@ -7,10 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="智能选股">
 <meta name="theme-color" content="#0e1217">
-<meta name="description" content="A股智能选股系统 - 五维共振选股体系">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
-<title>A股智能选股系统</title>
+<title>我的 - A股智能选股</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 :root {
@@ -27,90 +26,51 @@ html, body {
 }
 body { padding-bottom: calc(70px + var(--safe-bottom)); }
 
-/* 启动画面 */
-#splash {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: var(--bg); z-index: 9999;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    transition: opacity 0.5s ease;
-}
-#splash.hide { opacity: 0; pointer-events: none; }
-.splash-icon {
-    width: 90px; height: 90px; border-radius: 22px;
+/* 顶部 */
+.header {
+    padding: calc(20px + var(--safe-top)) 20px 16px;
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 42px; margin-bottom: 20px;
-    box-shadow: 0 8px 32px rgba(99,102,241,0.4);
-    animation: pulse 2s ease-in-out infinite;
 }
-@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-.splash-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-.splash-sub { font-size: 13px; color: var(--text-sec); }
-.splash-loading { margin-top: 30px; width: 30px; height: 30px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.header-title { font-size: 22px; font-weight: 700; color: #fff; }
+.header-sub { font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 4px; }
 
-/* 顶部状态栏 */
-.status-bar {
-    padding: calc(12px + var(--safe-top)) 16px 12px;
-    display: flex; justify-content: space-between; align-items: center;
-    background: var(--bg); position: sticky; top: 0; z-index: 100;
-    border-bottom: 1px solid var(--border);
+/* 数据概览 */
+.stats-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    padding: 16px; margin-top: -20px;
 }
-.status-left { display: flex; align-items: center; gap: 10px; }
-.app-icon {
-    width: 36px; height: 36px; border-radius: 10px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    display: flex; align-items: center; justify-content: center; font-size: 18px;
+.stat-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 10px; text-align: center;
 }
-.app-name { font-size: 17px; font-weight: 700; }
-.market-status {
-    font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 600;
-}
-.market-status.open { background: rgba(82,196,26,0.15); color: var(--down); }
-.market-status.closed { background: rgba(139,149,167,0.15); color: var(--text-sec); }
+.stat-card .val { font-size: 20px; font-weight: 700; font-family: Consolas, monospace; }
+.stat-card .lbl { font-size: 11px; color: var(--text-sec); margin-top: 4px; }
 
-/* 主内容区 */
-.content { padding: 16px; }
-
-/* 市场概览卡片 */
-.market-overview {
-    background: var(--card); border-radius: 14px; padding: 16px; margin-bottom: 16px;
-    border: 1px solid var(--border);
-}
-.overview-title { font-size: 13px; color: var(--text-sec); margin-bottom: 12px; font-weight: 600; }
-.index-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-.index-row:last-child { margin-bottom: 0; }
-.index-name { font-size: 14px; color: var(--text); }
-.index-value { font-family: "SF Mono", "Consolas", monospace; font-size: 14px; font-weight: 600; }
-.index-pct { font-family: "SF Mono", "Consolas", monospace; font-size: 13px; font-weight: 700; min-width: 60px; text-align: right; }
-.up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--text-sec); }
-
-/* 功能网格 */
-.section-title { font-size: 14px; color: var(--text-sec); margin: 20px 0 12px; font-weight: 600; padding-left: 4px; }
-.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
-.feature-card {
+/* 功能列表 */
+.section { padding: 0 16px; margin-bottom: 16px; }
+.section-title { font-size: 13px; color: var(--text-sec); font-weight: 600; margin: 20px 0 10px; padding-left: 4px; }
+.menu-list {
     background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-    padding: 18px 16px; cursor: pointer; transition: all 0.2s;
-    display: flex; flex-direction: column; gap: 8px;
+    overflow: hidden;
 }
-.feature-card:active { background: var(--card-hover); transform: scale(0.98); }
-.feature-icon {
-    width: 42px; height: 42px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center; font-size: 22px;
+.menu-item {
+    display: flex; align-items: center; padding: 14px 16px;
+    border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s;
+    text-decoration: none; color: var(--text);
 }
-.feature-name { font-size: 15px; font-weight: 600; }
-.feature-desc { font-size: 11px; color: var(--text-sec); line-height: 1.4; }
+.menu-item:last-child { border-bottom: none; }
+.menu-item:active { background: var(--card-hover); }
+.menu-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+    margin-right: 14px; flex-shrink: 0;
+}
+.menu-info { flex: 1; }
+.menu-name { font-size: 15px; font-weight: 600; }
+.menu-desc { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+.menu-arrow { color: var(--text-sec); font-size: 16px; }
 
-/* 快捷统计 */
-.stats-row { display: flex; gap: 10px; margin-bottom: 16px; }
-.stat-mini {
-    flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-    padding: 14px; text-align: center;
-}
-.stat-mini .val { font-size: 20px; font-weight: 700; font-family: "SF Mono", "Consolas", monospace; }
-.stat-mini .lbl { font-size: 11px; color: var(--text-sec); margin-top: 4px; }
-
-/* 底部导航 */
+/* 底部导航 - 4项 */
 .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: rgba(26,31,46,0.95); backdrop-filter: blur(20px);
@@ -121,261 +81,102 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
 }
 .nav-item {
     display: flex; flex-direction: column; align-items: center; gap: 3px;
-    padding: 6px 16px; cursor: pointer; color: var(--text-sec);
-    transition: color 0.2s; text-decoration: none;
+    padding: 6px 20px; cursor: pointer; color: var(--text-sec);
+    transition: color 0.2s; text-decoration: none; min-width: 60px;
 }
 .nav-item.active { color: var(--accent); }
 .nav-item .icon { font-size: 22px; }
 .nav-item .label { font-size: 10px; font-weight: 600; }
 
-/* 安装提示 */
-.install-prompt {
-    position: fixed; bottom: calc(90px + var(--safe-bottom)); left: 16px; right: 16px;
-    background: var(--card); border: 1px solid var(--accent); border-radius: 14px;
-    padding: 16px; z-index: 999; display: none;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-}
-.install-prompt.show { display: block; animation: slideUp 0.3s ease; }
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.install-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-.install-desc { font-size: 12px; color: var(--text-sec); margin-bottom: 12px; }
-.install-btns { display: flex; gap: 10px; }
-.install-btn {
-    flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600;
-    cursor: pointer;
-}
-.install-btn.primary { background: var(--accent); color: #fff; }
-.install-btn.secondary { background: var(--border); color: var(--text); }
-
-/* 离线状态提示 */
-.offline-banner {
-    position: fixed; top: calc(60px + var(--safe-top)); left: 0; right: 0;
-    background: linear-gradient(135deg, #fa8c16, #fa541c);
-    color: #fff; padding: 8px 16px; font-size: 13px; font-weight: 500;
-    text-align: center; z-index: 1500; display: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-.offline-banner.show { display: block; animation: slideDown 0.3s ease; }
-@keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
-
-/* 缓存状态面板 */
-.cache-status-panel {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 16px;
-    margin: 12px 16px;
-    font-size: 12px;
-}
-.cache-status-title {
-    font-weight: 600;
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.cache-status-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-}
-.cache-status-item {
-    text-align: center;
-    padding: 8px;
-    background: var(--bg);
-    border-radius: 8px;
-}
-.cache-status-num {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--accent);
-}
-.cache-status-label {
-    font-size: 10px;
-    color: var(--text-sec);
-    margin-top: 2px;
-}
-.cache-progress {
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    margin-top: 8px;
-    overflow: hidden;
-}
-.cache-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), #8b5cf6);
-    border-radius: 2px;
-    transition: width 0.3s;
-}
-
 /* Toast */
 .toast-container { position: fixed; top: calc(60px + var(--safe-top)); left: 50%; transform: translateX(-50%); z-index: 2000; }
-.toast {
-    padding: 10px 20px; border-radius: 8px; background: var(--card);
-    border: 1px solid var(--border); font-size: 13px; margin-bottom: 8px;
-    animation: toastIn 0.3s ease;
-}
-@keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-/* 下拉刷新 */
-.pull-refresh {
-    position: fixed; top: 0; left: 0; right: 0;
-    height: 0; overflow: hidden;
-    background: var(--bg);
-    display: flex; align-items: center; justify-content: center;
-    transition: height 0.2s; z-index: 999;
-}
-.pull-refresh.show { height: 50px; }
-.pull-refresh .spinner {
-    width: 20px; height: 20px; border: 2px solid var(--border);
-    border-top-color: var(--accent); border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
+.toast { padding: 10px 20px; border-radius: 8px; background: var(--card); border: 1px solid var(--border); font-size: 13px; margin-bottom: 8px; }
 </style>
 </head>
 <body>
-<div class="pull-refresh" id="pullRefresh"><div class="spinner"></div></div>
 
-<!-- 启动画面 -->
-<div id="splash">
-    <div class="splash-icon">📈</div>
-    <div class="splash-title">A股智能选股系统</div>
-    <div class="splash-sub">五维共振 · 实时行情 · 智能决策</div>
-    <div class="splash-loading"></div>
+<div class="header">
+    <div class="header-title">我的</div>
+    <div class="header-sub">A股智能选股系统 · 五维共振策略</div>
 </div>
 
-<!-- 顶部状态栏 -->
-<div class="status-bar">
-    <div class="status-left">
-        <div class="app-icon">📈</div>
-        <div class="app-name">智能选股</div>
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="val" style="color:var(--accent)" id="favCount">--</div>
+        <div class="lbl">自选股</div>
     </div>
-    <div class="market-status" id="marketStatus">加载中...</div>
-</div>
-
-<div class="content">
-    <!-- 市场概览 -->
-    <div class="market-overview">
-        <div class="overview-title">大盘指数</div>
-        <div id="indexList">
-            <div class="index-row"><span class="index-name">上证指数</span><span class="index-value flat">--</span><span class="index-pct flat">--</span></div>
-            <div class="index-row"><span class="index-name">深证成指</span><span class="index-value flat">--</span><span class="index-pct flat">--</span></div>
-            <div class="index-row"><span class="index-name">创业板指</span><span class="index-value flat">--</span><span class="index-pct flat">--</span></div>
-        </div>
+    <div class="stat-card">
+        <div class="val" style="color:var(--warn)" id="alertCount">--</div>
+        <div class="lbl">预警中</div>
     </div>
-
-    <!-- 快捷统计 -->
-    <div class="stats-row">
-        <div class="stat-mini"><div class="val" id="favCount">0</div><div class="lbl">自选股</div></div>
-        <div class="stat-mini"><div class="val" id="posCount">0</div><div class="lbl">持仓数</div></div>
-        <div class="stat-mini" onclick="toggleMobileNotify()" style="cursor:pointer"><div class="val" id="notifyStatus">🔔</div><div class="lbl" id="notifyLabel">开启通知</div></div>
-        <div class="stat-mini"><div class="val" id="alertCount">0</div><div class="lbl">预警中</div></div>
-    </div>
-
-    <!-- 核心功能 -->
-    <div class="section-title">核心功能</div>
-    <div class="grid">
-        <div class="feature-card" onclick="openPage('dashboard.html')">
-            <div class="feature-icon" style="background:rgba(99,102,241,0.15)">📊</div>
-            <div class="feature-name">实时看板</div>
-            <div class="feature-desc">81只龙头股实时行情、五维评分</div>
-        </div>
-        <div class="feature-card" onclick="openPage('stock-picker.html')">
-            <div class="feature-icon" style="background:rgba(82,196,26,0.15)">🎯</div>
-            <div class="feature-name">智能选股</div>
-            <div class="feature-desc">五维共振多条件筛选选股</div>
-        </div>
-        <div class="feature-card" onclick="openPage('portfolio.html')">
-            <div class="feature-icon" style="background:rgba(250,173,20,0.15)">💼</div>
-            <div class="feature-name">持仓管理</div>
-            <div class="feature-desc">持仓盈亏、资产分布、交易记录</div>
-        </div>
-        <div class="feature-card" onclick="openPage('price-alert.html')">
-            <div class="feature-icon" style="background:rgba(255,77,79,0.15)">🔔</div>
-            <div class="feature-name">价格预警</div>
-            <div class="feature-desc">突破/跌破预警，实时提醒</div>
-        </div>
-        <div class="feature-card" onclick="openPage('history.html')">
-            <div class="feature-icon" style="background:rgba(139,92,246,0.15)">📋</div>
-            <div class="feature-name">选股历史</div>
-            <div class="feature-desc">历史选股记录回溯与统计</div>
-        </div>
-        <div class="feature-card" onclick="openPage('strategy-comparison.html')">
-            <div class="feature-icon" style="background:rgba(82,196,26,0.15)">📈</div>
-            <div class="feature-name">策略回测</div>
-            <div class="feature-desc">四策略资金曲线对比与业绩</div>
-        </div>
-        <div class="feature-card" onclick="openPage('app.html')">
-            <div class="feature-icon" style="background:rgba(56,189,248,0.15)">⚙️</div>
-            <div class="feature-name">应用设置</div>
-            <div class="feature-desc">系统设置、关于、清除缓存</div>
-        </div>
+    <div class="stat-card">
+        <div class="val" style="color:var(--down)" id="posCount">--</div>
+        <div class="lbl">持仓</div>
     </div>
 </div>
 
-<!-- 安装提示 -->
-<div class="install-prompt" id="installPrompt">
-    <div class="install-title">📱 安装到主屏幕</div>
-    <div class="install-desc">添加到主屏幕后，可像原生App一样全屏使用，支持离线访问，行情数据实时更新。</div>
-    <div class="install-btns">
-        <button class="install-btn secondary" onclick="hideInstallPrompt()">稍后提醒</button>
-        <button class="install-btn primary" id="installNowBtn" onclick="installApp()" style="display:none">立即安装</button>
-        <button class="install-btn primary" onclick="showInstallGuide()">查看方法</button>
+<div class="section">
+    <div class="section-title">投资工具</div>
+    <div class="menu-list">
+        <a class="menu-item" href="./price-alert.html">
+            <div class="menu-icon" style="background:rgba(255,77,79,0.15)">🔔</div>
+            <div class="menu-info">
+                <div class="menu-name">价格预警</div>
+                <div class="menu-desc">突破/跌破预警，实时提醒</div>
+            </div>
+            <div class="menu-arrow">›</div>
+        </a>
+        <a class="menu-item" href="./history.html">
+            <div class="menu-icon" style="background:rgba(139,92,246,0.15)">📋</div>
+            <div class="menu-info">
+                <div class="menu-name">选股历史</div>
+                <div class="menu-desc">历史选股记录回溯与统计</div>
+            </div>
+            <div class="menu-arrow">›</div>
+        </a>
+        <a class="menu-item" href="./strategy-comparison.html">
+            <div class="menu-icon" style="background:rgba(82,196,26,0.15)">📈</div>
+            <div class="menu-info">
+                <div class="menu-name">策略回测</div>
+                <div class="menu-desc">四策略资金曲线对比与业绩</div>
+            </div>
+            <div class="menu-arrow">›</div>
+        </a>
+        <a class="menu-item" href="./parameter-sensitivity.html">
+            <div class="menu-icon" style="background:rgba(250,173,20,0.15)">⚙️</div>
+            <div class="menu-info">
+                <div class="menu-name">参数分析</div>
+                <div class="menu-desc">策略参数敏感性分析</div>
+            </div>
+            <div class="menu-arrow">›</div>
+        </a>
     </div>
 </div>
 
-<!-- 安装指南模态框 -->
-<div class="wechat-modal-overlay" id="installGuideModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:3000;align-items:center;justify-content:center;padding:20px">
-    <div style="background:var(--card);border-radius:16px;padding:24px;max-width:360px;width:100%;border:1px solid var(--border)">
-        <div style="font-size:18px;font-weight:700;margin-bottom:16px;text-align:center">📲 安装到主屏幕</div>
-        <div id="installGuideContent" style="font-size:14px;line-height:1.8;color:var(--text-sec);margin-bottom:20px"></div>
-        <button onclick="closeInstallGuide()" style="width:100%;padding:12px;background:var(--accent);border:none;color:#fff;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">我知道了</button>
-    </div>
-</div>
-
-<!-- 离线状态提示 -->
-<div class="offline-banner" id="offlineBanner">
-    📡 离线模式 - 显示缓存数据 <span id="offlineTime"></span>
-</div>
-
-<!-- 离线缓存状态 -->
-<div class="cache-status-panel" id="cacheStatusPanel">
-    <div class="cache-status-title">
-        <span>📦 离线缓存状态</span>
-        <span style="font-size:10px;color:var(--text-sec)" id="cacheMode">在线</span>
-    </div>
-    <div class="cache-status-grid">
-        <div class="cache-status-item">
-            <div class="cache-status-num" id="cachePages">0</div>
-            <div class="cache-status-label">缓存页面</div>
+<div class="section">
+    <div class="section-title">系统</div>
+    <div class="menu-list">
+        <div class="menu-item" onclick="clearCache()">
+            <div class="menu-icon" style="background:rgba(139,149,167,0.15)">🗑️</div>
+            <div class="menu-info">
+                <div class="menu-name">清除缓存</div>
+                <div class="menu-desc">清除离线缓存数据</div>
+            </div>
+            <div class="menu-arrow">›</div>
         </div>
-        <div class="cache-status-item">
-            <div class="cache-status-num" id="cacheApi">0</div>
-            <div class="cache-status-label">API缓存</div>
+        <div class="menu-item" onclick="showAbout()">
+            <div class="menu-icon" style="background:rgba(99,102,241,0.15)">ℹ️</div>
+            <div class="menu-info">
+                <div class="menu-name">关于</div>
+                <div class="menu-desc">版本 v2.0 · 五维共振选股</div>
+            </div>
+            <div class="menu-arrow">›</div>
         </div>
-        <div class="cache-status-item">
-            <div class="cache-status-num" id="cacheSize">0</div>
-            <div class="cache-status-label">缓存大小(KB)</div>
-        </div>
-    </div>
-    <div class="cache-progress">
-        <div class="cache-progress-fill" id="cacheProgress" style="width:0%"></div>
     </div>
 </div>
 
-<!-- 数据更新时间 -->
-<div style="text-align:center;padding:8px;font-size:11px;color:var(--text-sec);margin-bottom:70px">
-    数据更新: <span id="dataUpdateTime">--</span>
-</div>
-
-<!-- 底部导航 -->
+<!-- 底部导航 4项 -->
 <div class="bottom-nav">
-    <a class="nav-item active" href="./mobile.html">
-        <span class="icon">🏠</span><span class="label">首页</span>
-    </a>
     <a class="nav-item" href="./dashboard.html">
         <span class="icon">📊</span><span class="label">看板</span>
     </a>
@@ -385,410 +186,46 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
     <a class="nav-item" href="./portfolio.html">
         <span class="icon">💼</span><span class="label">持仓</span>
     </a>
-    <a class="nav-item" href="./price-alert.html">
-        <span class="icon">🔔</span><span class="label">预警</span>
+    <a class="nav-item active" href="./mobile.html">
+        <span class="icon">👤</span><span class="label">我的</span>
     </a>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-// 启动画面
-window.addEventListener('load', () => {
-    setTimeout(() => {
-        document.getElementById('splash').classList.add('hide');
-    }, 1200);
-});
-
-// 注册Service Worker
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-            .then(reg => console.log('SW注册成功'))
-            .catch(err => console.log('SW注册失败:', err));
-    });
-}
-
-// PWA安装事件
-let deferredPrompt;
-let installPromptDismissed = 0;
-
-// 检测是否已安装（standalone模式）
-function isAppInstalled() {
-    return (window.matchMedia('(display-mode: standalone)').matches) || 
-           (window.navigator.standalone === true) ||
-           (document.referrer.includes('android-app://'));
-}
-
-// 显示安装提示
-function maybeShowInstallPrompt() {
-    if (isAppInstalled()) return; // 已安装不显示
+// 加载统计数据
+function loadStats() {
+    const favs = JSON.parse(localStorage.getItem('astock_favorites') || '[]');
+    document.getElementById('favCount').textContent = favs.length;
     
-    const lastDismiss = parseInt(localStorage.getItem('install_prompt_dismissed') || '0');
-    const now = Date.now();
-    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    const alerts = JSON.parse(localStorage.getItem('astock_price_alerts') || '[]');
+    document.getElementById('alertCount').textContent = alerts.filter(a => a.enabled !== false).length;
     
-    // 如果7天内已关闭过，不显示
-    if (lastDismiss && (now - lastDismiss) < sevenDays) return;
-    
-    setTimeout(() => {
-        document.getElementById('installPrompt').classList.add('show');
-        // 如果支持原生安装提示，显示"立即安装"按钮
-        if (deferredPrompt) {
-            const btn = document.getElementById('installNowBtn');
-            if (btn) btn.style.display = 'block';
-        }
-    }, 3000);
+    const positions = JSON.parse(localStorage.getItem('astock_positions') || '[]');
+    document.getElementById('posCount').textContent = positions.length;
 }
+loadStats();
 
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    maybeShowInstallPrompt();
-});
-
-// 如果不支持beforeinstallprompt（iOS），也显示提示
-if (!window.BeforeInstallPromptEvent) {
-    setTimeout(maybeShowInstallPrompt, 3000);
-}
-
-function hideInstallPrompt() {
-    document.getElementById('installPrompt').classList.remove('show');
-    localStorage.setItem('install_prompt_dismissed', Date.now().toString());
-}
-
-function installApp() {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-                showToast('安装成功！');
-            }
-            deferredPrompt = null;
-        });
-    } else {
-        showInstallGuide();
-    }
-    hideInstallPrompt();
-}
-
-function showInstallGuide() {
-    hideInstallPrompt();
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isAndroid = /Android/.test(navigator.userAgent);
-    let guide = '';
-    if (isIOS) {
-        guide = `<div style="margin-bottom:12px"><strong style="color:var(--accent)">iPhone / iPad 安装步骤：</strong></div>
-        <div>1. 点击浏览器底部的 <strong>分享</strong> 按钮 <span style="font-size:20px">⎋</span></div>
-        <div>2. 向下滑动，选择 <strong>"添加到主屏幕"</strong></div>
-        <div>3. 点击右上角 <strong>"添加"</strong></div>
-        <div style="margin-top:12px;padding:10px;background:rgba(99,102,241,0.1);border-radius:8px;font-size:12px">添加后，主屏幕会出现"智能选股"图标，点击即可全屏使用</div>`;
-    } else if (isAndroid) {
-        guide = `<div style="margin-bottom:12px"><strong style="color:var(--accent)">安卓手机安装步骤：</strong></div>
-        <div>1. 点击浏览器右上角的 <strong>菜单</strong> 按钮 <span style="font-size:20px">⋮</span></div>
-        <div>2. 选择 <strong>"添加到主屏幕"</strong> 或 <strong>"安装应用"</strong></div>
-        <div>3. 确认添加，等待安装完成</div>
-        <div style="margin-top:12px;padding:10px;background:rgba(99,102,241,0.1);border-radius:8px;font-size:12px">Chrome浏览器会自动检测PWA，可能直接弹出安装提示</div>`;
-    } else {
-        guide = `<div style="margin-bottom:12px"><strong style="color:var(--accent)">安装说明：</strong></div>
-        <div>请在手机浏览器（Chrome / Safari）中打开此页面</div>
-        <div style="margin-top:8px">iOS：分享 → 添加到主屏幕</div>
-        <div>Android：菜单 → 添加到主屏幕 / 安装应用</div>`;
-    }
-    document.getElementById('installGuideContent').innerHTML = guide;
-    document.getElementById('installGuideModal').style.display = 'flex';
-}
-
-function closeInstallGuide() {
-    document.getElementById('installGuideModal').style.display = 'none';
-}
-
-// 安装成功后隐藏提示
-window.addEventListener('appinstalled', () => {
-    hideInstallPrompt();
-    localStorage.setItem('app_installed', '1');
-    showToast('应用已安装成功！');
-});
-
-// 离线状态检测
-function updateOfflineStatus() {
-    const banner = document.getElementById('offlineBanner');
-    if (!banner) return;
-    if (!navigator.onLine) {
-        banner.classList.add('show');
-        // 显示缓存数据最后更新时间
-        const lastUpdate = localStorage.getItem('astock_last_update');
-        const timeEl = document.getElementById('offlineTime');
-        if (timeEl && lastUpdate) {
-            timeEl.textContent = '(最后更新: ' + lastUpdate + ')';
-        }
-    } else {
-        banner.classList.remove('show');
+function clearCache() {
+    if (confirm('确定清除所有缓存数据？')) {
+        if (caches) { caches.keys().then(keys => keys.forEach(k => caches.delete(k))); }
+        showToast('缓存已清除');
     }
 }
 
-// 更新数据最后更新时间
-function updateDataTime() {
-    const now = new Date();
-    const timeStr = now.getFullYear() + '-' + 
-        String(now.getMonth()+1).padStart(2,'0') + '-' + 
-        String(now.getDate()).padStart(2,'0') + ' ' +
-        String(now.getHours()).padStart(2,'0') + ':' +
-        String(now.getMinutes()).padStart(2,'0') + ':' +
-        String(now.getSeconds()).padStart(2,'0');
-    localStorage.setItem('astock_last_update', timeStr);
-    const el = document.getElementById('dataUpdateTime');
-    if (el) el.textContent = timeStr;
-}
-window.addEventListener('online', () => {
-    updateOfflineStatus();
-    showToast('网络已恢复，正在刷新数据...');
-    setTimeout(() => location.reload(), 1500);
-});
-window.addEventListener('offline', () => {
-    updateOfflineStatus();
-    showToast('网络已断开，显示缓存数据');
-});
-// 初始检查
-setTimeout(updateOfflineStatus, 1000);
-// 初始更新时间
-setTimeout(updateDataTime, 2000);
-// 每30秒更新一次时间
-setInterval(updateDataTime, 30000);
-
-// 更新缓存状态
-async function updateCacheStatus() {
-    try {
-        if (!('caches' in window)) return;
-        const cacheNames = await caches.keys();
-        let pageCount = 0, apiCount = 0, totalSize = 0;
-        
-        for (const name of cacheNames) {
-            const cache = await caches.open(name);
-            const requests = await cache.keys();
-            for (const req of requests) {
-                const url = new URL(req.url);
-                if (url.pathname.startsWith('/api/') || url.hostname.includes('eastmoney') || url.hostname.includes('sina')) {
-                    apiCount++;
-                } else {
-                    pageCount++;
-                }
-                try {
-                    const resp = await cache.match(req);
-                    if (resp) {
-                        const blob = await resp.clone().blob();
-                        totalSize += blob.size;
-                    }
-                } catch(e) {}
-            }
-        }
-        
-        document.getElementById('cachePages').textContent = pageCount;
-        document.getElementById('cacheApi').textContent = apiCount;
-        document.getElementById('cacheSize').textContent = (totalSize / 1024).toFixed(1);
-        document.getElementById('cacheProgress').style.width = Math.min(100, (apiCount / 50) * 100) + '%';
-        document.getElementById('cacheMode').textContent = navigator.onLine ? '在线' : '离线';
-    } catch(e) {
-        console.log('缓存状态更新失败:', e);
-    }
+function showAbout() {
+    showToast('A股智能选股系统 v2.0\n五维共振策略 · 81只龙头股');
 }
 
-// 初始更新缓存状态
-setTimeout(updateCacheStatus, 3000);
-setInterval(updateCacheStatus, 60000);
-
-// 页面跳转
-function openPage(url) {
-    window.location.href = './' + url;
-}
-
-// Toast提示
 function showToast(msg) {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = msg;
-    container.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast'; t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
 }
-
-// 加载大盘指数
-async function loadIndices() {
-    try {
-        const url = 'https://push2delay.eastmoney.com/api/qt/ulist.np/get?secids=1.000001,0.399001,0.399006&fields=f2,f3,f4,f12,f14';
-        const resp = await fetch(url);
-        const data = await resp.json();
-        if (data && data.data && data.data.diff) {
-            const names = ['上证指数', '深证成指', '创业板指'];
-            const html = data.data.diff.map((item, i) => {
-                const pct = item.f3 / 100;
-                const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
-                const sign = pct > 0 ? '+' : '';
-                return `<div class="index-row">
-                    <span class="index-name">${names[i] || item.f14}</span>
-                    <span class="index-value ${cls}">${(item.f2/100).toFixed(2)}</span>
-                    <span class="index-pct ${cls}">${sign}${pct.toFixed(2)}%</span>
-                </div>`;
-            }).join('');
-            document.getElementById('indexList').innerHTML = html;
-        }
-    } catch(e) { console.log('指数加载失败', e); }
-}
-
-// 市场状态
-function updateMarketStatus() {
-    const now = new Date();
-    const day = now.getDay();
-    const hour = now.getHours();
-    const minute = now.getMinutes();
-    const time = hour * 60 + minute;
-    const isWeekday = day >= 1 && day <= 5;
-    const isMorning = time >= 9 * 60 + 30 && time <= 11 * 60 + 30;
-    const isAfternoon = time >= 13 * 60 && time <= 15 * 60;
-    const el = document.getElementById('marketStatus');
-    if (isWeekday && (isMorning || isAfternoon)) {
-        el.textContent = '交易中';
-        el.className = 'market-status open';
-    } else {
-        el.textContent = '已休市';
-        el.className = 'market-status closed';
-    }
-}
-
-// 加载本地统计
-function loadLocalStats() {
-    try {
-        const fav = JSON.parse(localStorage.getItem('astock_favorites') || '[]');
-        const pos = JSON.parse(localStorage.getItem('astock_positions') || '[]');
-        const alerts = JSON.parse(localStorage.getItem('astock_price_alerts') || '[]');
-        const activeAlerts = alerts.filter(a => a.enabled !== false);
-        document.getElementById('favCount').textContent = fav.length;
-        document.getElementById('posCount').textContent = pos.length;
-        document.getElementById('alertCount').textContent = activeAlerts.length;
-    } catch(e) {}
-}
-
-// 初始化
-loadIndices();
-updateMarketStatus();
-loadLocalStats();
-setInterval(loadIndices, 30000);
-setInterval(updateMarketStatus, 60000);
-
-    // 移动端通知功能
-    let mobileNotifyEnabled = false;
-    
-    function toggleMobileNotify() {
-        if (!('Notification' in window)) {
-            alert('当前浏览器不支持系统通知');
-            return;
-        }
-        if (mobileNotifyEnabled) {
-            mobileNotifyEnabled = false;
-            updateNotifyUI();
-            return;
-        }
-        if (Notification.permission === 'granted') {
-            mobileNotifyEnabled = true;
-            updateNotifyUI();
-            startAlertMonitor();
-        } else if (Notification.permission !== 'denied') {
-            Notification.requestPermission().then(p => {
-                if (p === 'granted') {
-                    mobileNotifyEnabled = true;
-                    updateNotifyUI();
-                    startAlertMonitor();
-                }
-            });
-        }
-    }
-    
-    function updateNotifyUI() {
-        const status = document.getElementById('notifyStatus');
-        const label = document.getElementById('notifyLabel');
-        if (status) status.textContent = mobileNotifyEnabled ? '🔔' : '🔕';
-        if (label) label.textContent = mobileNotifyEnabled ? '通知已开' : '开启通知';
-    }
-    
-    function sendMobileNotify(title, body) {
-        if (!mobileNotifyEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
-        try {
-            const n = new Notification(title, { body: body, tag: 'mobile-alert-' + Date.now() });
-            n.onclick = () => { window.focus(); n.close(); };
-            setTimeout(() => n.close(), 8000);
-        } catch(e) {}
-    }
-    
-    let alertMonitorTimer = null;
-    function startAlertMonitor() {
-        if (alertMonitorTimer) return;
-        alertMonitorTimer = setInterval(() => {
-            if (!mobileNotifyEnabled) return;
-            const alerts = JSON.parse(localStorage.getItem('astock_price_alerts') || '[]');
-            const activeAlerts = alerts.filter(a => a.enabled !== false && !a.triggered);
-            // 简化版：检查是否有预警接近触发（实际需要行情数据）
-            if (activeAlerts.length > 0) {
-                // 这里可以接入实时行情检查
-                // sendMobileNotify('价格预警监控', `正在监控${activeAlerts.length}个预警`);
-            }
-        }, 30000);
-    }
-    
-    // 页面加载时检查通知权限
-    if ('Notification' in window && Notification.permission === 'granted') {
-        mobileNotifyEnabled = true;
-        setTimeout(updateNotifyUI, 500);
-    }
-    
-
-
-// 监听其他页面的storage变化
-window.addEventListener('storage', (e) => {
-    if (['astock_favorites', 'astock_positions', 'astock_price_alerts'].includes(e.key)) {
-        loadLocalStats();
-    }
-});
-
-
-// 下拉刷新
-let touchStartY = 0;
-let isPulling = false;
-document.addEventListener('touchstart', (e) => {
-    if (window.scrollY === 0) {
-        touchStartY = e.touches[0].clientY;
-        isPulling = true;
-    }
-}, { passive: true });
-document.addEventListener('touchmove', (e) => {
-    if (!isPulling) return;
-    const diff = e.touches[0].clientY - touchStartY;
-    if (diff > 60) {
-        document.getElementById('pullRefresh').classList.add('show');
-    }
-}, { passive: true });
-document.addEventListener('touchend', (e) => {
-    if (!isPulling) return;
-    isPulling = false;
-    const pullEl = document.getElementById('pullRefresh');
-    if (pullEl.classList.contains('show')) {
-        setTimeout(() => {
-            loadIndices();
-            loadLocalStats();
-            updateMarketStatus();
-            pullEl.classList.remove('show');
-        }, 800);
-    }
-});
-
-// 应用更新检测
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (confirm('发现新版本，是否刷新更新？')) {
-            window.location.reload();
-        }
-    });
-}
-
 </script>
+
 </body>
 </html>
