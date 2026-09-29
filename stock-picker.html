@@ -493,10 +493,14 @@ function toggleFilter() {
   overlay.classList.toggle('show');
 }
 
+// 全局存储当前结果，供详情弹窗使用
+let lastResults = [];
+
 // 移动端卡片渲染（同花顺风格）
 function renderMobileCards(data) {
   const container = document.getElementById('mobileResultCards');
   if (!container) return;
+  lastResults = data;
   
   let html = '<div style="background:var(--bg-sec);border:1px solid var(--border);border-radius:10px;overflow:hidden">';
   data.slice(0, 50).forEach(item => {
@@ -834,8 +838,52 @@ function saveResults() {
 
 // 查看详情（跳转到看板）
 function viewDetail(code) {
-  window.parent.postMessage({ type: 'navigate', page: 'dashboard', code: code }, '*');
-  showToast(`正在跳转到看板查看 ${code} 详情...`);
+  const item = lastResults.find(r => r.stock.code === code);
+  if (!item) { showToast('未找到 ' + code + ' 详情'); return; }
+  const pct = item.f3 ? Number(item.f3) / 100 : 0;
+  const price = item.f2 ? Number(item.f2) / 100 : 0;
+  const pctClass = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+  const score = item.score || 0;
+  const scoreClass = score >= 75 ? 'high' : score >= 60 ? 'mid' : 'low';
+
+  document.getElementById('detailBody').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:20px;font-weight:700">${item.stock.name}</div>
+        <div style="font-size:12px;color:var(--text-sec);margin-top:2px">${item.stock.code} · ${item.stock.sector}</div>
+      </div>
+      <div class="mpc-score-badge ${scoreClass}" style="font-size:16px;padding:6px 14px">${score}分</div>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:16px">
+      <div style="flex:1;text-align:center;background:var(--bg-sec);border-radius:10px;padding:12px">
+        <div style="font-size:22px;font-weight:700" class="${pctClass}">${price.toFixed(2)}</div>
+        <div style="font-size:11px;color:var(--text-sec)">现价</div>
+      </div>
+      <div style="flex:1;text-align:center;background:var(--bg-sec);border-radius:10px;padding:12px">
+        <div style="font-size:22px;font-weight:700" class="${pctClass}">${pct>=0?'+':''}${pct.toFixed(2)}%</div>
+        <div style="font-size:11px;color:var(--text-sec)">涨跌幅</div>
+      </div>
+    </div>
+    <div style="background:var(--bg-sec);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">五维数据</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+        <div>PE(TTM)</div><div style="text-align:right;font-weight:600">${item.pe>0?item.pe.toFixed(1):'--'}</div>
+        <div>ROE</div><div style="text-align:right;font-weight:600">${item.roe?item.roe.toFixed(1)+'%':'--'}</div>
+        <div>营收增长</div><div style="text-align:right;font-weight:600">${item.revenueGrow?item.revenueGrow.toFixed(1)+'%':'--'}</div>
+        <div>净利润增长</div><div style="text-align:right;font-weight:600">${item.profitGrow?item.profitGrow.toFixed(1)+'%':'--'}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="addFavorite('${item.stock.code}','${item.stock.name}');closeDetail()" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:14px;font-weight:600">+ 加入自选</button>
+      <button onclick="showToast('K线图需在看板查看');closeDetail()" style="flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text);font-size:14px">K线走势</button>
+    </div>
+  `;
+  document.getElementById('detailSheet').classList.add('show');
+  document.getElementById('detailOverlay').classList.add('show');
+}
+function closeDetail(){
+  document.getElementById('detailSheet').classList.remove('show');
+  document.getElementById('detailOverlay').classList.remove('show');
 }
 
 // 加入自选
@@ -890,6 +938,26 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
   document.body.style.paddingBottom = 'calc(70px + env(safe-area-inset-bottom,0px))';
 }
 </script>
+
+<!-- 个股详情 Bottom Sheet -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail()"></div>
+<div class="detail-sheet" id="detailSheet">
+  <div class="detail-handle"></div>
+  <div class="detail-header">
+    <span style="font-size:15px;font-weight:600">个股详情</span>
+    <span onclick="closeDetail()" style="font-size:22px;cursor:pointer;color:var(--text-sec)">&times;</span>
+  </div>
+  <div id="detailBody"></div>
+</div>
+<style>
+.detail-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2500;opacity:0;pointer-events:none;transition:opacity .25s}
+.detail-overlay.show{opacity:1;pointer-events:auto}
+.detail-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:500px;background:var(--bg);border-radius:20px 20px 0 0;z-index:2600;padding:8px 16px calc(20px + env(safe-area-inset-bottom));transition:transform .3s ease;max-height:80vh;overflow-y:auto}
+.detail-sheet.show{transform:translateX(-50%) translateY(0)}
+.detail-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 12px}
+.detail-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.up{color:#f6465d}.down{color:#0ecb81}.flat{color:var(--text-sec)}
+</style>
 
 </body>
 </html>
