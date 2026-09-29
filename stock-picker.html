@@ -66,15 +66,27 @@ body {
   .strategy-name { margin-bottom: 0; font-size: 14px; }
   .strategy-desc { font-size: 11px; }
   
-  /* 筛选面板：可折叠抽屉 */
+  /* 筛选面板：全屏抽屉 */
   .filter-toggle { display: block; }
   .filter-panel { 
-    width: 100%; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw !important; max-width: 100vw !important;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: var(--bg); z-index: 2000; overflow-y: auto;
     transform: translateX(-100%); transition: transform 0.3s ease;
-    border-radius: 0; padding: 60px 16px 100px;
+    border-radius: 0; padding: 60px 14px 100px;
   }
   .filter-panel.open { transform: translateX(0); box-shadow: 2px 0 20px rgba(0,0,0,0.5); }
+  .filter-title { font-size: 15px; font-weight: 700; margin: 18px 0 10px; color: var(--text); }
+  .checkbox-item { padding: 6px 12px; font-size: 12px; }
+  .filter-section { margin-bottom: 8px; }
+  /* 底部按钮栏固定 */
+  .filter-panel .btn-group {
+    position: sticky; bottom: 0; background: var(--bg);
+    padding: 12px 0 calc(20px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    display: flex; gap: 10px; margin-top: 20px;
+  }
+  .filter-panel .btn-group .btn { flex: 1; padding: 12px; font-size: 14px; }
   
   /* 结果：隐藏表格，显示卡片 */
   .result-table { display: none !important; }
