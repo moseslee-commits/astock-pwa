@@ -161,6 +161,10 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   img, canvas, svg { max-width: 100%; height: auto; }
   body { padding-bottom: 90px !important; }
 
+  /* 手机端隐藏宽表格 */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .stock-table { min-width: 600px; }
+
   .stock-table-wrap { display: none; }
   .mobile-stock-list { display: block; }
 }
