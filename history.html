@@ -147,6 +147,13 @@ body {
   img, canvas, svg { max-width: 100%; height: auto; }
   body { padding-bottom: 90px !important; }
 
+    /* header纵向：标题占满一行，按钮换行 */
+    .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .header h1 { font-size: 18px; }
+    .header .sub { display: block; margin-left: 0; margin-top: 4px; font-size: 11px; }
+    .header-right { width: 100%; }
+    .header-right .btn { flex: 1; text-align: center; }
+
     .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
     .stat-card { padding: 14px 10px; }
     .stat-value { font-size: 20px; }
