@@ -24,26 +24,41 @@ html, body {
     background: var(--bg); color: var(--text); line-height: 1.5;
     font-size: 15px; overflow-x: hidden; min-height: 100vh;
 }
-body { padding-bottom: calc(70px + var(--safe-bottom)); }
+body { padding-bottom: calc(72px + var(--safe-bottom)); }
 
-/* 顶部 */
+/* 顶部用户区 */
 .header {
-    padding: calc(20px + var(--safe-top)) 20px 16px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    padding: calc(20px + var(--safe-top)) 20px 20px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed 60%, #a855f7);
 }
-.header-title { font-size: 22px; font-weight: 700; color: #fff; }
-.header-sub { font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 4px; }
+.user-row { display: flex; align-items: center; gap: 14px; }
+.avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.3);
+}
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 18px; font-weight: 700; color: #fff; }
+.user-meta { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; display: inline-block; box-shadow: 0 0 6px #4ade80; }
+.header-badge {
+    background: rgba(255,255,255,0.18); color: #fff; font-size: 11px; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px; backdrop-filter: blur(10px);
+}
 
 /* 数据概览 */
 .stats-grid {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-    padding: 16px; margin-top: -20px;
+    padding: 16px; margin-top: -22px; position: relative; z-index: 2;
 }
 .stat-card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-    padding: 14px 10px; text-align: center;
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px 8px; text-align: center;
+    transition: transform 0.2s;
 }
-.stat-card .val { font-size: 20px; font-weight: 700; font-family: Consolas, monospace; }
+.stat-card:active { transform: scale(0.96); }
+.stat-card .val { font-size: 24px; font-weight: 700; font-family: Consolas, monospace; font-variant-numeric: tabular-nums; }
 .stat-card .lbl { font-size: 11px; color: var(--text-sec); margin-top: 4px; }
 
 /* 功能列表 */
@@ -54,9 +69,9 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
     overflow: hidden;
 }
 .menu-item {
-    display: flex; align-items: center; padding: 14px 16px;
+    display: flex; align-items: center; padding: 13px 16px;
     border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s;
-    text-decoration: none; color: var(--text);
+    text-decoration: none; color: var(--text); position: relative;
 }
 .menu-item:last-child { border-bottom: none; }
 .menu-item:active { background: var(--card-hover); }
@@ -65,54 +80,104 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
     display: flex; align-items: center; justify-content: center; font-size: 18px;
     margin-right: 14px; flex-shrink: 0;
 }
-.menu-info { flex: 1; }
+.menu-info { flex: 1; min-width: 0; }
 .menu-name { font-size: 15px; font-weight: 600; }
 .menu-desc { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
-.menu-arrow { color: var(--text-sec); font-size: 16px; }
+.menu-badge {
+    background: var(--warn); color: #000; font-size: 10px; font-weight: 700;
+    min-width: 18px; height: 18px; border-radius: 9px; padding: 0 6px;
+    display: flex; align-items: center; justify-content: center; margin-right: 8px;
+}
+.menu-badge.hidden { display: none; }
+.menu-arrow { color: var(--text-sec); font-size: 18px; }
 
-/* 底部导航 - 4项 */
+/* 底部导航 */
 .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0;
-    background: rgba(26,31,46,0.95); backdrop-filter: blur(20px);
+    background: rgba(26,31,46,0.96); backdrop-filter: blur(20px);
     border-top: 1px solid var(--border);
     display: flex; justify-content: space-around;
-    padding: 8px 0 calc(8px + var(--safe-bottom));
+    padding: 6px 0 calc(6px + var(--safe-bottom));
     z-index: 1000;
 }
 .nav-item {
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-    padding: 6px 20px; cursor: pointer; color: var(--text-sec);
-    transition: color 0.2s; text-decoration: none; min-width: 60px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 18px; cursor: pointer; color: var(--text-sec);
+    transition: color 0.2s; text-decoration: none; min-width: 64px;
+    position: relative;
 }
 .nav-item.active { color: var(--accent); }
+.nav-item.active::before {
+    content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 24px; height: 3px; border-radius: 2px; background: var(--accent);
+}
 .nav-item .icon { font-size: 22px; }
 .nav-item .label { font-size: 10px; font-weight: 600; }
 
 /* Toast */
-.toast-container { position: fixed; top: calc(60px + var(--safe-top)); left: 50%; transform: translateX(-50%); z-index: 2000; }
-.toast { padding: 10px 20px; border-radius: 8px; background: var(--card); border: 1px solid var(--border); font-size: 13px; margin-bottom: 8px; }
+.toast-container {
+    position: fixed; top: calc(70px + var(--safe-top)); left: 50%;
+    transform: translateX(-50%); z-index: 2000; width: max-content; max-width: 90vw;
+}
+.toast {
+    padding: 10px 18px; border-radius: 10px; background: rgba(26,31,46,0.96);
+    border: 1px solid var(--border); font-size: 13px; margin-bottom: 8px;
+    backdrop-filter: blur(20px); text-align: center; max-width: 90vw;
+    animation: toastIn 0.25s ease;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 底部弹出Sheet */
+.sheet-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    z-index: 1500; justify-content: center; align-items: flex-end;
+}
+.sheet-overlay.active { display: flex; }
+.sheet {
+    background: var(--card); border-radius: 20px 20px 0 0; width: 100%;
+    padding: 20px 20px calc(24px + var(--safe-bottom));
+    animation: sheetUp 0.25s ease;
+}
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--border); margin: 0 auto 16px; }
+.sheet h3 { font-size: 17px; margin-bottom: 12px; text-align: center; }
+.sheet-body { font-size: 13px; color: var(--text-sec); line-height: 1.7; white-space: pre-line; }
+.sheet-actions { display: flex; gap: 10px; margin-top: 20px; }
+.sheet-btn {
+    flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card-hover); color: var(--text); font-size: 14px; cursor: pointer;
+    font-weight: 600;
+}
+.sheet-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sheet-btn.danger { color: var(--up); border-color: rgba(255,77,79,0.4); }
 </style>
 </head>
 <body>
 
 <div class="header">
-    <div class="header-title">我的</div>
-    <div class="header-sub">A股智能选股系统 · 五维共振策略</div>
+    <div class="user-row">
+        <div class="avatar">投</div>
+        <div class="user-info">
+            <div class="user-name">投资者</div>
+            <div class="user-meta"><span class="sync-dot"></span>数据已同步 · <span id="todayDate"></span></div>
+        </div>
+        <div class="header-badge">Pro</div>
+    </div>
 </div>
 
 <div class="stats-grid">
-    <div class="stat-card">
-        <div class="val" style="color:var(--accent)" id="favCount">--</div>
+    <a class="stat-card" href="./portfolio.html">
+        <div class="val" style="color:var(--accent)" id="favCount">0</div>
         <div class="lbl">自选股</div>
-    </div>
-    <div class="stat-card">
-        <div class="val" style="color:var(--warn)" id="alertCount">--</div>
+    </a>
+    <a class="stat-card" href="./price-alert.html">
+        <div class="val" style="color:var(--warn)" id="alertCount">0</div>
         <div class="lbl">预警中</div>
-    </div>
-    <div class="stat-card">
-        <div class="val" style="color:var(--down)" id="posCount">--</div>
+    </a>
+    <a class="stat-card" href="./portfolio.html">
+        <div class="val" style="color:var(--down)" id="posCount">0</div>
         <div class="lbl">持仓</div>
-    </div>
+    </a>
 </div>
 
 <div class="section">
@@ -124,6 +189,7 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
                 <div class="menu-name">价格预警</div>
                 <div class="menu-desc">突破/跌破预警，实时提醒</div>
             </div>
+            <div class="menu-badge hidden" id="badgeAlert">0</div>
             <div class="menu-arrow">›</div>
         </a>
         <a class="menu-item" href="./history.html">
@@ -156,7 +222,7 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
 <div class="section">
     <div class="section-title">系统</div>
     <div class="menu-list">
-        <div class="menu-item" onclick="clearCache()">
+        <div class="menu-item" onclick="openClearSheet()">
             <div class="menu-icon" style="background:rgba(139,149,167,0.15)">🗑️</div>
             <div class="menu-info">
                 <div class="menu-name">清除缓存</div>
@@ -164,7 +230,7 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
             </div>
             <div class="menu-arrow">›</div>
         </div>
-        <div class="menu-item" onclick="showAbout()">
+        <div class="menu-item" onclick="openAboutSheet()">
             <div class="menu-icon" style="background:rgba(99,102,241,0.15)">ℹ️</div>
             <div class="menu-info">
                 <div class="menu-name">关于</div>
@@ -175,7 +241,7 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
     </div>
 </div>
 
-<!-- 底部导航 4项 -->
+<!-- 底部导航 -->
 <div class="bottom-nav">
     <a class="nav-item" href="./dashboard.html">
         <span class="icon">📊</span><span class="label">看板</span>
@@ -191,31 +257,92 @@ body { padding-bottom: calc(70px + var(--safe-bottom)); }
     </a>
 </div>
 
+<!-- About Sheet -->
+<div class="sheet-overlay" id="aboutSheet" onclick="if(event.target===this)closeSheet('aboutSheet')">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <h3>关于系统</h3>
+        <div class="sheet-body">A股智能选股系统 v2.0
+
+五维共振策略 · 81只龙头股
+数据来源：东方财富实时行情
+
+风险提示：
+本系统仅供学习研究，不构成投资建议。
+股市有风险，入市需谨慎。</div>
+        <div class="sheet-actions">
+            <button class="sheet-btn primary" onclick="closeSheet('aboutSheet')">我知道了</button>
+        </div>
+    </div>
+</div>
+
+<!-- Clear Cache Sheet -->
+<div class="sheet-overlay" id="clearSheet" onclick="if(event.target===this)closeSheet('clearSheet')">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <h3>清除缓存</h3>
+        <div class="sheet-body" style="text-align:center">确定要清除所有离线缓存数据吗？
+清除后下次打开需重新加载行情数据。</div>
+        <div class="sheet-actions">
+            <button class="sheet-btn" onclick="closeSheet('clearSheet')">取消</button>
+            <button class="sheet-btn danger" onclick="doClearCache()">确认清除</button>
+        </div>
+    </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-// 加载统计数据
+// 日期
+document.getElementById('todayDate').textContent = new Date().toLocaleDateString('zh-CN', {month:'long', day:'numeric', weekday:'short'});
+
+// 数字滚动动画
+function animateNumber(el, target) {
+    const start = 0;
+    const dur = 500;
+    const t0 = performance.now();
+    function step(t) {
+        const p = Math.min(1, (t - t0) / dur);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(start + (target - start) * eased);
+        if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
 function loadStats() {
     const favs = JSON.parse(localStorage.getItem('astock_favorites') || '[]');
-    document.getElementById('favCount').textContent = favs.length;
-    
     const alerts = JSON.parse(localStorage.getItem('astock_price_alerts') || '[]');
-    document.getElementById('alertCount').textContent = alerts.filter(a => a.enabled !== false).length;
-    
+    const activeAlerts = alerts.filter(a => a.enabled !== false);
     const positions = JSON.parse(localStorage.getItem('astock_positions') || '[]');
-    document.getElementById('posCount').textContent = positions.length;
+
+    animateNumber(document.getElementById('favCount'), favs.length);
+    animateNumber(document.getElementById('alertCount'), activeAlerts.length);
+    animateNumber(document.getElementById('posCount'), positions.length);
+
+    // 角标
+    const badge = document.getElementById('badgeAlert');
+    if (activeAlerts.length > 0) {
+        badge.textContent = activeAlerts.length > 99 ? '99+' : activeAlerts.length;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
 }
 loadStats();
 
-function clearCache() {
-    if (confirm('确定清除所有缓存数据？')) {
-        if (caches) { caches.keys().then(keys => keys.forEach(k => caches.delete(k))); }
-        showToast('缓存已清除');
-    }
-}
+// 监听localStorage变化（其他页操作后回来刷新）
+window.addEventListener('focus', loadStats);
+window.addEventListener('storage', loadStats);
 
-function showAbout() {
-    showToast('A股智能选股系统 v2.0\n五维共振策略 · 81只龙头股');
+function openAboutSheet() { document.getElementById('aboutSheet').classList.add('active'); }
+function openClearSheet() { document.getElementById('clearSheet').classList.add('active'); }
+function closeSheet(id) { document.getElementById(id).classList.remove('active'); }
+
+function doClearCache() {
+    closeSheet('clearSheet');
+    if (caches) { caches.keys().then(keys => keys.forEach(k => caches.delete(k))); }
+    showToast('✅ 缓存已清除');
 }
 
 function showToast(msg) {
@@ -223,7 +350,7 @@ function showToast(msg) {
     const t = document.createElement('div');
     t.className = 'toast'; t.textContent = msg;
     c.appendChild(t);
-    setTimeout(() => t.remove(), 2500);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 2200);
 }
 </script>
 

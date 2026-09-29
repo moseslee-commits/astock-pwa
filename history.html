@@ -115,6 +115,36 @@ body {
     .stats-grid { grid-template-columns: repeat(3, 1fr); }
     .chart-row { grid-template-columns: 1fr; }
 }
+
+/* 移动端底部导航 */
+.mobile-bottom-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(26,31,46,0.96); backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    justify-content: space-around;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 997;
+}
+.mobile-nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 16px; color: #8b95a7; text-decoration: none;
+    font-size: 11px; font-weight: 600; min-width: 60px; min-height: 48px;
+    justify-content: center; position: relative;
+}
+.mobile-nav-item .icon { font-size: 22px; }
+.mobile-nav-item.active { color: #6366f1; }
+.mobile-nav-item.active::before {
+    content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 24px; height: 3px; border-radius: 0 0 2px 2px; background: #6366f1;
+}
+@media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+    .stat-card { padding: 14px 10px; }
+    .stat-value { font-size: 20px; }
+    .btn { white-space: nowrap; padding: 8px 12px; font-size: 12px; }
+    .container { padding-bottom: 90px; }
+}
 </style>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0e1217">

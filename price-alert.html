@@ -135,6 +135,49 @@ tr:hover { background: rgba(99,102,241,0.05); }
 }
 input:checked + .slider { background-color: var(--accent); }
 input:checked + .slider:before { transform: translateX(18px); }
+
+/* 移动端底部导航 */
+.mobile-bottom-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(26,31,46,0.96); backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    justify-content: space-around;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 997;
+}
+.mobile-nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 16px; color: #8b95a7; text-decoration: none;
+    font-size: 11px; font-weight: 600; min-width: 60px; min-height: 48px;
+    justify-content: center; position: relative;
+}
+.mobile-nav-item .icon { font-size: 22px; }
+.mobile-nav-item.active { color: #6366f1; }
+.mobile-nav-item.active::before {
+    content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 24px; height: 3px; border-radius: 0 0 2px 2px; background: #6366f1;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .container { padding: 12px 14px; padding-bottom: 90px; }
+    .header { flex-wrap: wrap; gap: 10px; padding: 12px 0 14px; }
+    .header h1 { font-size: 18px; }
+    .header-right { flex-wrap: wrap; gap: 6px; width: 100%; }
+    .header-right .btn { padding: 7px 12px; font-size: 12px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-card { padding: 14px; }
+    .stat-card .value { font-size: 22px; }
+    .tabs { overflow-x: auto; }
+    .tab-btn { padding: 10px 14px; white-space: nowrap; font-size: 13px; }
+    table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    th, td { padding: 8px 10px; font-size: 12px; }
+    .modal { padding: 18px; width: 94vw; }
+    .form-row { grid-template-columns: 1fr; gap: 0; }
+    .toast-container { top: auto; bottom: calc(80px + env(safe-area-inset-bottom,0px)); right: 12px; left: 12px; }
+    .toast { width: 100%; }
+}
 </style>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0e1217">
