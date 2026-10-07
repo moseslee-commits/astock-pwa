@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -152,19 +152,7 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 
 /* 移动端卡片式股票列表 */
 .mobile-stock-list { display: none; }
-@media (max-width: 768px) {  /* 全局：固定窗口，禁止横向溢出 */
-  html, body {
-    overflow-x: hidden;
-    max-width: 100vw;
-  }
-  * { max-width: 100%; }
-  img, canvas, svg { max-width: 100%; height: auto; }
-  body { padding-bottom: 90px !important; }
-
-  /* 手机端隐藏宽表格 */
-  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .stock-table { min-width: 600px; }
-
+@media (max-width: 768px) {
   .stock-table-wrap { display: none; }
   .mobile-stock-list { display: block; }
 }
@@ -606,25 +594,6 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
     width: 48px; height: 48px; font-size: 22px;
     bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
-
-  /* Header 小元素防竖排 */
-  .market-status, .tunnel-status, .countdown-timer, .update-time {
-    flex-shrink: 0;
-  }
-  .header-right .search-box { flex: 1 1 120px; min-width: 100px; }
-  .header-right .search-box input { width: 100%; min-width: 0; }
-  .update-time { display: none; }
-
-  /* section-title 按钮组横向滚动 */
-  .section-title {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
-  }
-  .section-title .count-hint { width: 100%; }
-  .section-title .copy-btn,
-  .section-title .history-btn,
-  .section-title .compare-btn {
-    flex-shrink: 0; white-space: nowrap; font-size: 11px; padding: 5px 10px;
-  }
   
   /* 搜索框优化 */
   .search-box { padding: 10px 14px; font-size: 14px; border-radius: 20px; }
@@ -644,37 +613,6 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   /* 滚动条隐藏（移动端更美观） */
   .sector-filter::-webkit-scrollbar { display: none; }
   .stock-table-wrap::-webkit-scrollbar { display: none; }
-
-  /* Header 移动端重排 */
-  .header { flex-direction: column; align-items: stretch; gap: 10px; }
-  .header h1 { font-size: 18px; line-height: 1.3; }
-  .header h1 .sub { display: block; font-size: 11px; margin-top: 2px; }
-  .header h1 .badge { font-size: 10px; padding: 1px 6px; }
-  .params-bar {
-    display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;
-    margin-top: 6px; padding-bottom: 4px;
-  }
-  .params-bar::-webkit-scrollbar { display: none; }
-  .params-bar span {
-    white-space: nowrap; font-size: 10px; padding: 2px 8px;
-    background: rgba(255,255,255,0.06); border-radius: 10px;
-  }
-  .header-right {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-  }
-  .header-right .search-box { flex: 1 1 140px; }
-  .header-right .search-box input { width: 100%; }
-  .market-status, .tunnel-status, .countdown-timer {
-    font-size: 11px; white-space: nowrap;
-  }
-  .refresh-toggle { font-size: 11px; display: inline-flex; align-items: center; gap: 4px; }
-  .update-time { font-size: 10px; color: #8b95a7; }
-
-  /* 微信悬浮按钮避开底部导航 */
-  .wechat-float-btn {
-    bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
-    right: 14px !important;
-  }}
 }
 
 @media (max-width: 480px) {
@@ -1060,10 +998,11 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 <div class="mobile-back-btn" onclick="history.back()" style="display:none">←</div>
 <!-- 移动端底部导航 -->
 <div class="mobile-bottom-nav" style="display:none">
+  <a class="mobile-nav-item" href="./mobile.html"><span class="icon">🏠</span>首页</a>
   <a class="mobile-nav-item active" href="./dashboard.html"><span class="icon">📊</span>看板</a>
   <a class="mobile-nav-item" href="./stock-picker.html"><span class="icon">🎯</span>选股</a>
   <a class="mobile-nav-item" href="./portfolio.html"><span class="icon">💼</span>持仓</a>
-  <a class="mobile-nav-item" href="./mobile.html"><span class="icon">👤</span>我的</a>
+  <a class="mobile-nav-item" href="./price-alert.html"><span class="icon">🔔</span>预警</a>
 </div>
 <script>
 // 手势操作功能
@@ -1786,6 +1725,15 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
   </div>
 </div>
 
+<!-- 微信悬浮按钮 -->
+<div class="wechat-float-btn" id="wechatFloatBtn" title="添加微信获取选股服务">
+  <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+    <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.27-.027-.407-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>
+  </svg>
+  <span class="wechat-float-text">微信选股</span>
+</div>
+
+<!-- 微信弹窗 -->
 <!-- 策略说明弹窗 -->
 <div class="wechat-modal-overlay" id="strategyHelpModal" onclick="if(event.target===this)this.classList.remove('active')">
   <div class="wechat-modal" style="max-width:560px">
@@ -2705,6 +2653,14 @@ try {
 } catch(e) {}
 
 
+// 行业中性化Z-score→评分：invert=true时z越低分越高（PE/PB越低越好）
+function sectorZToScore(z, invert) {
+  if (z === null || z === undefined || isNaN(z)) return 55;
+  if (invert) z = -z;
+  // z=-2→30分, z=0→65分, z=2→95分（线性映射）
+  return Math.max(10, Math.min(95, 65 + z * 15));
+}
+
 // ============ 五维共振选股体系 ============
 // 基本面25% + 估值面20% + 资金面20% + 技术面25% + 风险面10%
 
@@ -2721,7 +2677,7 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
   const totalMv = rt.f116 ? Number(rt.f116) : 0; // 总市值（元）
 
   // ===== 1. 基本面评分 (25%) =====
-  // 用盈利收益率(1/PE)和市值规模作为代理
+  // 盈利收益率绝对分档 + 行业相对位置调整（P0行业中性化）
   let fundamentalScore = 50;
   const fundamentalDetails = {};
   if (pe && pe > 0) {
@@ -2731,6 +2687,14 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
     else if (earningsYield >= 4) fundamentalScore = 60;  // PE 17-25
     else if (earningsYield >= 2) fundamentalScore = 45;  // PE 25-50
     else fundamentalScore = 30;                           // PE>50
+    // 行业内相对位置：盈利收益率显著高于行业均值加分，低于则减分
+    const st2 = window.__sectorStats ? window.__sectorStats[stock.sector] : null;
+    if (st2 && st2.peMean && st2.peMean > 0) {
+      const eYieldDev = (earningsYield - (100 / st2.peMean)) / (100 / st2.peMean); // 相对偏差
+      if (eYieldDev > 0.3) fundamentalScore = Math.min(100, fundamentalScore + 8);
+      else if (eYieldDev < -0.3) fundamentalScore = Math.max(20, fundamentalScore - 8);
+      fundamentalDetails.eYieldDev = (eYieldDev >= 0 ? '+' : '') + (eYieldDev * 100).toFixed(0) + '%';
+    }
     fundamentalDetails.earningsYield = earningsYield.toFixed(1) + '%';
   } else {
     fundamentalScore = 40; // 亏损或无PE
@@ -2742,28 +2706,28 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
   fundamentalDetails.totalMv = totalMv > 0 ? (totalMv / 1e8).toFixed(0) + '亿' : '--';
 
   // ===== 2. 估值面评分 (20%) =====
+  // P0行业中性化：行业内Z-score替代绝对阈值，消除板块系统性偏差
   let valuationScore = 50;
   const valuationDetails = {};
-  if (pe && pe > 0 && pb && pb > 0) {
-    // PE估值分（越低越好）
-    let peScore = 50;
-    if (pe < 10) peScore = 95;
-    else if (pe < 15) peScore = 85;
-    else if (pe < 20) peScore = 75;
-    else if (pe < 30) peScore = 60;
-    else if (pe < 50) peScore = 45;
-    else peScore = 30;
-    // PB估值分
-    let pbScore = 50;
-    if (pb < 1) pbScore = 90;
-    else if (pb < 2) pbScore = 80;
-    else if (pb < 3) pbScore = 65;
-    else if (pb < 5) pbScore = 50;
-    else pbScore = 35;
-    valuationScore = (peScore * 0.6 + pbScore * 0.4);
-    valuationDetails.peScore = peScore;
-    valuationDetails.pbScore = pbScore;
+  const sectorStats = window.__sectorStats || {};
+  const sStat = sectorStats[stock.sector];
+  if (pe && pe > 0 && sStat && sStat.peMean && sStat.peStd) {
+    // PE行业内Z-score（z越低=比行业便宜→分越高）
+    const peZ = (pe - sStat.peMean) / sStat.peStd;
+    let peScore = sectorZToScore(peZ, true);
+    // PB行业内Z-score
+    let pbScore = 55;
+    if (pb && pb > 0 && sStat.pbMean && sStat.pbStd) {
+      const pbZ = (pb - sStat.pbMean) / sStat.pbStd;
+      pbScore = sectorZToScore(pbZ, true);
+    }
+    valuationScore = peScore * 0.6 + pbScore * 0.4;
+    valuationDetails.peScore = Math.round(peScore);
+    valuationDetails.pbScore = Math.round(pbScore);
+    valuationDetails.peZ = peZ.toFixed(2);
+    valuationDetails.sector = stock.sector;
   } else if (pe && pe > 0) {
+    // 行业数据不足时退回全局分档
     valuationScore = pe < 20 ? 75 : pe < 40 ? 55 : 35;
   }
   valuationDetails.pe = pe ? pe.toFixed(1) : '--';
@@ -2840,8 +2804,25 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
 
   let total = fundamentalScore * fw + valuationScore * vw + capitalScore * cw + technicalScore * tw + riskScore * rw;
 
-  // 风险一票否决：ST或风险分<30，总分上限50
-  if (riskScore < 30) total = Math.min(total, 50);
+  // ===== 硬性否决规则 (P0) =====
+  // 从"加权平均"改为"先否决后打分"，模拟CANSLIM要素缺一不可
+  let vetoed = false, vetoReason = '';
+  // V1: 风险分<40 直接否决
+  if (riskScore < 40) { vetoed = true; vetoReason = '风险分' + Math.round(riskScore) + '<40'; }
+  // V2: 近5日跌幅>15% 否决
+  if (!vetoed && klines && klines.length >= 6) {
+    const closesV = klines.map(k => k.close);
+    const chg5dVal = (closesV[closesV.length-1] - closesV[closesV.length-6]) / closesV[closesV.length-6] * 100;
+    if (chg5dVal < -15) { vetoed = true; vetoReason = '5日跌' + Math.abs(chg5dVal).toFixed(0) + '%'; }
+  }
+  // V3: ST股否决
+  if (!vetoed && stock.name && stock.name.includes('ST')) { vetoed = true; vetoReason = 'ST股'; }
+  // V4: 基本面分<30 否决
+  if (!vetoed && fundamentalScore < 30) { vetoed = true; vetoReason = '基本面' + Math.round(fundamentalScore) + '<30'; }
+
+  if (vetoed) {
+    total = Math.min(total, 30); // 否决股总分上限30，排序垫底
+  }
 
   return {
     total: Math.round(total),
@@ -2850,6 +2831,8 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
     capital: Math.round(capitalScore),
     technical: Math.round(technicalScore),
     risk: Math.round(riskScore),
+    vetoed: vetoed,
+    vetoReason: vetoReason,
     details: {
       fundamental: fundamentalDetails,
       valuation: valuationDetails,
@@ -3367,6 +3350,31 @@ function renderData(diff) {
     return Math.round(count / arr.length * 100);
   }
 
+  // 行业中性化统计：按行业计算PE/PB均值与标准差 (P0)
+  const sectorValuationStats = {};
+  watchlist.forEach(s => {
+    const d = dataMap[s.secid];
+    if (!d) return;
+    const peS = d.f9 && d.f9 !== '-' ? Number(d.f9)/100 : null;
+    const pbS = d.f23 && d.f23 !== '-' ? Number(d.f23)/100 : null;
+    if (!sectorValuationStats[s.sector]) sectorValuationStats[s.sector] = { peList: [], pbList: [] };
+    if (peS && peS > 0 && peS < 500) sectorValuationStats[s.sector].peList.push(peS);
+    if (pbS && pbS > 0 && pbS < 100) sectorValuationStats[s.sector].pbList.push(pbS);
+  });
+  function calcSectorStd(list, mean) {
+    if (!list || list.length < 2) return null;
+    const variance = list.reduce((a, b) => a + (b - mean) ** 2, 0) / list.length;
+    return Math.sqrt(variance);
+  }
+  Object.keys(sectorValuationStats).forEach(sector => {
+    const sst = sectorValuationStats[sector];
+    sst.peMean = sst.peList.length ? sst.peList.reduce((a,b) => a+b, 0) / sst.peList.length : null;
+    sst.pbMean = sst.pbList.length ? sst.pbList.reduce((a,b) => a+b, 0) / sst.pbList.length : null;
+    sst.peStd = calcSectorStd(sst.peList, sst.peMean);
+    sst.pbStd = calcSectorStd(sst.pbList, sst.pbMean);
+  });
+  window.__sectorStats = sectorValuationStats;
+
   // Build stock data with conditions + three-factor composite score
   const indexChange5d = calcIndexChange5d(dataMap);
   const stockData = watchlist.map(stock => {
@@ -3581,7 +3589,10 @@ function renderData(diff) {
         }
         const vRatio = rt && rt.f10 ? Number(rt.f10)/100 : 0;
         if (vRatio >= 1.2 && vRatio <= 2.5) reasons.push('<span class="reason-tag reason-vol">温和放量</span>');
-        if (reasons.length > 0) return '<div class="stock-reasons">' + reasons.slice(0, 4).join('') + '</div>';
+        if (score && score.vetoed) {
+          reasons.unshift('<span class="reason-tag" style="background:rgba(255,77,79,0.25);color:#ff4d4f;font-weight:700">否决:' + score.vetoReason + '</span>');
+        }
+        if (reasons.length > 0) return '<div class="stock-reasons">' + reasons.slice(0, 5).join('') + '</div>';
         return '';
       })() + '</td>' +
       '<td class="hide-mobile"><span class="sector">' + stock.sector + '</span></td>' +
@@ -3974,6 +3985,9 @@ function renderMobileStockCards(stockData) {
     const volStr = vol >= 100000000 ? (vol/100000000).toFixed(1) + '亿' : vol >= 10000 ? (vol/10000).toFixed(0) + '万' : vol;
     
     let tags = '';
+    if (s.score && s.score.vetoed) {
+      tags += '<span class="msc-tag" style="background:rgba(255,77,79,0.25);color:#ff4d4f;font-weight:700">否决:' + (s.score.vetoReason || '') + '</span>';
+    }
     if (vRatio >= 3) tags += '<span class="msc-tag">巨量</span>';
     else if (vRatio >= 2) tags += '<span class="msc-tag green">放量</span>';
     
