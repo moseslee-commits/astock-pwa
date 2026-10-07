@@ -2798,6 +2798,50 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
     if (relativeStrength > 5) technicalScore = Math.min(100, technicalScore + 5);
     technicalDetails.relativeStrength = relativeStrength.toFixed(1) + '%';
   }
+  // ===== P2技术面增强 =====
+  if (klines && klines.length >= 20) {
+    const closesT = klines.map(k => k.close);
+    const volsT = klines.map(k => k.volume);
+    const n = closesT.length;
+    const lastClose = closesT[n-1];
+    // (1) 量价配合：近3日价涨且量增 → +5
+    if (n >= 5) {
+      const priceUp3 = lastClose > closesT[n-4];
+      const volUp3 = volsT[n-1] > volsT[n-4];
+      if (priceUp3 && volUp3) {
+        technicalScore = Math.min(100, technicalScore + 5);
+        technicalDetails.volPrice = '量价配合';
+      }
+    }
+    // (2) 顶背离：价创新高(20日)但量能萎缩 → -10
+    if (n >= 20) {
+      const high20 = Math.max(...closesT.slice(-20));
+      const isNewHigh = lastClose >= high20 * 0.995;
+      const avgVol5 = volsT.slice(-5).reduce((a,b) => a+b, 0) / 5;
+      const volShrink = volsT[n-1] < avgVol5 * 0.8;
+      if (isNewHigh && volShrink) {
+        technicalScore = Math.max(0, technicalScore - 10);
+        technicalDetails.topDivergence = '顶背离';
+      }
+    }
+    // (3) 筹码集中：近10日振幅收窄至前10日的80%以下 → +5
+    if (n >= 22) {
+      const rangeRecent = (Math.max(...closesT.slice(-10)) - Math.min(...closesT.slice(-10))) / closesT[n-11];
+      const rangePrev = (Math.max(...closesT.slice(-20, -10)) - Math.min(...closesT.slice(-20, -10))) / closesT[n-21];
+      if (rangePrev > 0 && rangeRecent < rangePrev * 0.8) {
+        technicalScore = Math.min(100, technicalScore + 5);
+        technicalDetails.chipConcentration = '筹码集中';
+      }
+    }
+    // (4) 突破形态：现价贴近20日高点(>98%位置) → +5
+    if (n >= 20) {
+      const high20B = Math.max(...closesT.slice(-20));
+      if (high20B > 0 && lastClose / high20B > 0.98) {
+        technicalScore = Math.min(100, technicalScore + 5);
+        technicalDetails.breakout = '贴近高点';
+      }
+    }
+  }
 
   // ===== 5. 风险面评分 (10%) =====
   let riskScore = 70;
@@ -2823,6 +2867,31 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
     const closes = klines.map(k => k.close);
     const chg5d = (closes[closes.length-1] - closes[closes.length-6]) / closes[closes.length-6] * 100;
     if (chg5d > 15 && volRatio > 2) { riskPenalty += 25; riskDetails.overbought = '5日涨' + chg5d.toFixed(0) + '%'; }
+  }
+  // ===== P2风险面增强 =====
+  // (1) 最大回撤监控：20日窗口内最大回撤>20% → 惩罚15
+  if (klines && klines.length >= 20) {
+    const closesR = klines.map(k => k.close);
+    let peak = closesR[0], maxDD = 0;
+    for (let i = 1; i < closesR.length; i++) {
+      if (closesR[i] > peak) peak = closesR[i];
+      const dd = (peak - closesR[i]) / peak * 100;
+      if (dd > maxDD) maxDD = dd;
+    }
+    if (maxDD > 20) { riskPenalty += 15; riskDetails.maxDrawdown = maxDD.toFixed(0) + '%'; }
+    else if (maxDD > 12) { riskPenalty += 5; riskDetails.maxDrawdown = maxDD.toFixed(0) + '%'; }
+    riskDetails.drawdown = maxDD.toFixed(1) + '%';
+  }
+  // (2) 下跌趋势惩罚：现价在MA20下方且MA20下行 → 惩罚10
+  if (klines && klines.length >= 25) {
+    const closesR = klines.map(k => k.close);
+    const nR = closesR.length;
+    const ma20 = closesR.slice(-20).reduce((a,b) => a+b, 0) / 20;
+    const prevMa20 = closesR.slice(-21, -1).reduce((a,b) => a+b, 0) / 20;
+    if (closesR[nR-1] < ma20 && ma20 < prevMa20) {
+      riskPenalty += 10;
+      riskDetails.downtrend = 'MA20下方';
+    }
   }
   // ST风险
   if (stock.name && stock.name.includes('ST')) { riskPenalty += 50; riskDetails.st = true; }
@@ -3611,7 +3680,8 @@ function renderData(diff) {
         '\nROE:' + (score.qualityDetail.roe || '?') + ' 净利率:' + (score.qualityDetail.netMargin || '?') +
         ' 量比:' + (score.smartMoneyDetail.volRatio || '?') +
         ' 换手:' + (score.smartMoneyDetail.turnover || '?') +
-        ' 主力:' + (score.smartMoneyDetail.flowRatio || '?');
+        ' 主力:' + (score.smartMoneyDetail.flowRatio || '?') +
+        ' 技术:' + (score.timingDetail.topDivergence || score.timingDetail.volPrice || score.timingDetail.breakout || score.timingDetail.chipConcentration || '条件' + (score.timingDetail.conditionsMet || '?'));
       scoreHtml = '<span class="score-badge ' + scoreClass + '" title="' + tooltip + '">' + s + '</span>' +
         (riskTags.length > 0 ? '<div style="margin-top:2px">' + riskTags.join('') + '</div>' : '');
     } else {
@@ -4341,6 +4411,8 @@ function openStockDetail(stock, rt) {
     if (fd.risk) {
       if (fd.risk.highVol) riskItems.push('高波动' + fd.risk.highVol);
       if (fd.risk.overbought) riskItems.push('过热');
+      if (fd.risk.maxDrawdown) riskItems.push('回撤' + fd.risk.maxDrawdown);
+      if (fd.risk.downtrend) riskItems.push('下跌趋势');
       if (fd.risk.st) riskItems.push('ST');
     }
     document.getElementById('sdRiskSub').textContent = riskItems.length > 0 ? riskItems.join(' ') : '正常';
