@@ -4098,11 +4098,12 @@ function renderMobileStockCards(stockData) {
     const changeClass = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
     const changeStr = (pct > 0 ? '+' : '') + pct.toFixed(2) + '%';
     
+    // 五维总分（修复：原用cond.count条件数但阈值按五维分判断的bug）
     let scoreVal = '--', scoreClass = 'low';
-    if (s.cond && s.cond.count >= 0) {
-      scoreVal = s.cond.count;
+    if (s.score && s.score.total !== undefined) {
+      scoreVal = s.score.total;
       if (scoreVal >= 75) scoreClass = 'high';
-      else if (scoreVal >= 55) scoreClass = 'mid';
+      else if (scoreVal >= 60) scoreClass = 'mid';
     }
     
     const volStr = vol >= 100000000 ? (vol/100000000).toFixed(1) + '亿' : vol >= 10000 ? (vol/10000).toFixed(0) + '万' : vol;
@@ -4114,9 +4115,27 @@ function renderMobileStockCards(stockData) {
     if (s.rt && s.rt.f62 && s.rt.f6 && s.rt.f62 !== '-' && s.rt.f6 !== '-') {
       const mf = Number(s.rt.f62), amt = Number(s.rt.f6);
       if (amt > 0 && mf / amt >= 0.02) tags += '<span class="msc-tag">主力流入</span>';
+      else if (amt > 0 && mf / amt <= -0.02) tags += '<span class="msc-tag" style="background:rgba(38,197,124,0.15);color:#26c57c">主力流出</span>';
     }
     if (vRatio >= 3) tags += '<span class="msc-tag">巨量</span>';
     else if (vRatio >= 2) tags += '<span class="msc-tag green">放量</span>';
+    // P2技术/风险标记（移动端精简展示）
+    const td = s.score && s.score.fiveDimension ? s.score.fiveDimension.details.technical : null;
+    const rd = s.score && s.score.fiveDimension ? s.score.fiveDimension.details.risk : null;
+    if (td && td.topDivergence) tags += '<span class="msc-tag" style="background:rgba(250,173,20,0.2);color:#faad14">顶背离</span>';
+    if (td && td.volPrice) tags += '<span class="msc-tag" style="background:rgba(82,196,26,0.15);color:#52c41a">量价配合</span>';
+    if (td && td.breakout) tags += '<span class="msc-tag" style="background:rgba(82,196,26,0.15);color:#52c41a">突破</span>';
+    if (rd && rd.maxDrawdown) tags += '<span class="msc-tag" style="background:rgba(255,77,79,0.2);color:#ff4d4f">回撤' + rd.maxDrawdown + '</span>';
+    if (rd && rd.downtrend) tags += '<span class="msc-tag" style="background:rgba(255,77,79,0.2);color:#ff4d4f">下跌趋势</span>';
+    if (s.score && s.score.highVol) tags += '<span class="msc-tag" style="background:rgba(250,173,20,0.2);color:#faad14">高波动</span>';
+    
+    // 主力资金占比 + ROE（有则显示）
+    let flowStr = '';
+    if (s.rt && s.rt.f62 && s.rt.f6 && s.rt.f62 !== '-' && s.rt.f6 !== '-') {
+      const mf = Number(s.rt.f62), amt = Number(s.rt.f6);
+      if (amt > 0) flowStr = ' · 主力' + (mf / amt * 100 >= 0 ? '+' : '') + (mf / amt * 100).toFixed(1) + '%';
+    }
+    const roeStr = (s.score && s.score.qualityDetail && s.score.qualityDetail.roe && s.score.qualityDetail.roe !== '--') ? ' · ROE' + s.score.qualityDetail.roe : '';
     
     html += `<div class="mobile-stock-card" onclick="showStockDetail('${stock.secid}')">
       <div class="msc-left">
@@ -4125,7 +4144,7 @@ function renderMobileStockCards(stockData) {
           <span class="msc-code">${stock.secid.split('.')[1]}</span>
           <span class="msc-score-badge ${scoreClass}">${scoreVal}分</span>
         </div>
-        <div class="msc-sub">换手${turnover.toFixed(1)}% · 量比${vRatio.toFixed(2)} · ${volStr}</div>
+        <div class="msc-sub">换手${turnover.toFixed(1)}% · 量比${vRatio.toFixed(2)}${flowStr}${roeStr}</div>
         ${tags ? `<div class="msc-tags">${tags}</div>` : ''}
       </div>
       <div class="msc-right">
