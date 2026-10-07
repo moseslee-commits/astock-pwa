@@ -2798,19 +2798,24 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
     if (relativeStrength > 5) technicalScore = Math.min(100, technicalScore + 5);
     technicalDetails.relativeStrength = relativeStrength.toFixed(1) + '%';
   }
-  // ===== P2技术面增强 =====
+  // ===== P2技术面增强（P2.7回测实证三档化） =====
+  // 回测结论(80天/3510观测): 追涨信号全面跑输(强市量价-1.82%/突破-1.41%)，
+  // 仅极强市(上证5日涨>1.5%)保留加分；震荡/弱市减分防追涨陷阱
   if (klines && klines.length >= 20) {
     const closesT = klines.map(k => k.close);
     const volsT = klines.map(k => k.volume);
     const n = closesT.length;
     const lastClose = closesT[n-1];
-    // (1) 量价配合：近3日价涨且量增 → +5
+    const marketStrong = indexChange5d !== null && indexChange5d > 1.5;
+    const marketWeak = indexChange5d !== null && indexChange5d < -1.5;
+    // (1) 量价配合：极强+5，中性-2，极弱-5
     if (n >= 5) {
       const priceUp3 = lastClose > closesT[n-4];
       const volUp3 = volsT[n-1] > volsT[n-4];
       if (priceUp3 && volUp3) {
-        technicalScore = Math.min(100, technicalScore + 5);
-        technicalDetails.volPrice = '量价配合';
+        if (marketStrong) { technicalScore = Math.min(100, technicalScore + 5); technicalDetails.volPrice = '量价配合'; }
+        else if (marketWeak) { technicalScore = Math.max(0, technicalScore - 5); technicalDetails.volPrice = '弱市诱多'; }
+        else { technicalScore = Math.max(0, technicalScore - 2); technicalDetails.volPrice = '量价中性'; }
       }
     }
     // (2) 顶背离：价创新高(20日)但量能萎缩 → -10
@@ -2833,12 +2838,13 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
         technicalDetails.chipConcentration = '筹码集中';
       }
     }
-    // (4) 突破形态：现价贴近20日高点(>98%位置) → +5
+    // (4) 突破形态：极强+5，中性-3，极弱-5
     if (n >= 20) {
       const high20B = Math.max(...closesT.slice(-20));
       if (high20B > 0 && lastClose / high20B > 0.98) {
-        technicalScore = Math.min(100, technicalScore + 5);
-        technicalDetails.breakout = '贴近高点';
+        if (marketStrong) { technicalScore = Math.min(100, technicalScore + 5); technicalDetails.breakout = '突破'; }
+        else if (marketWeak) { technicalScore = Math.max(0, technicalScore - 5); technicalDetails.breakout = '弱市假突破'; }
+        else { technicalScore = Math.max(0, technicalScore - 3); technicalDetails.breakout = '震荡假突破'; }
       }
     }
   }
@@ -2882,14 +2888,15 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
     else if (maxDD > 12) { riskPenalty += 5; riskDetails.maxDrawdown = maxDD.toFixed(0) + '%'; }
     riskDetails.drawdown = maxDD.toFixed(1) + '%';
   }
-  // (2) 下跌趋势惩罚：现价在MA20下方且MA20下行 → 惩罚10
+  // (2) 下跌趋势惩罚：现价在MA20下方且MA20下行 → 惩罚5
+  // 回测: 下跌趋势股5日超跌反弹+0.28%(vs基准-0.39%)，惩罚从10降至5平衡风控与反弹
   if (klines && klines.length >= 25) {
     const closesR = klines.map(k => k.close);
     const nR = closesR.length;
     const ma20 = closesR.slice(-20).reduce((a,b) => a+b, 0) / 20;
     const prevMa20 = closesR.slice(-21, -1).reduce((a,b) => a+b, 0) / 20;
     if (closesR[nR-1] < ma20 && ma20 < prevMa20) {
-      riskPenalty += 10;
+      riskPenalty += 5;
       riskDetails.downtrend = 'MA20下方';
     }
   }
