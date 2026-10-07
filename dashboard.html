@@ -2677,31 +2677,44 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
   const totalMv = rt.f116 ? Number(rt.f116) : 0; // 总市值（元）
 
   // ===== 1. 基本面评分 (25%) =====
-  // 盈利收益率绝对分档 + 行业相对位置调整（P0行业中性化）
+  // P1真实质量因子：ROE(40%) + 净利率(30%) + 营收增速(30%)，行业内Z-score中性化
   let fundamentalScore = 50;
   const fundamentalDetails = {};
-  if (pe && pe > 0) {
-    const earningsYield = 100 / pe; // 盈利收益率%
-    if (earningsYield >= 10) fundamentalScore = 90;      // PE<10，高盈利收益率
-    else if (earningsYield >= 6) fundamentalScore = 75;  // PE 10-17
-    else if (earningsYield >= 4) fundamentalScore = 60;  // PE 17-25
-    else if (earningsYield >= 2) fundamentalScore = 45;  // PE 25-50
-    else fundamentalScore = 30;                           // PE>50
-    // 行业内相对位置：盈利收益率显著高于行业均值加分，低于则减分
-    const st2 = window.__sectorStats ? window.__sectorStats[stock.sector] : null;
-    if (st2 && st2.peMean && st2.peMean > 0) {
-      const eYieldDev = (earningsYield - (100 / st2.peMean)) / (100 / st2.peMean); // 相对偏差
-      if (eYieldDev > 0.3) fundamentalScore = Math.min(100, fundamentalScore + 8);
-      else if (eYieldDev < -0.3) fundamentalScore = Math.max(20, fundamentalScore - 8);
-      fundamentalDetails.eYieldDev = (eYieldDev >= 0 ? '+' : '') + (eYieldDev * 100).toFixed(0) + '%';
-    }
-    fundamentalDetails.earningsYield = earningsYield.toFixed(1) + '%';
+  const stF = (window.__sectorStats || {})[stock.sector];
+  const roeVal = rt.f37 && rt.f37 !== '-' ? Number(rt.f37) : null;
+  const revVal = rt.f40 && rt.f40 !== '-' ? Number(rt.f40) : null;
+  const netVal = rt.f42 && rt.f42 !== '-' ? Number(rt.f42) : null;
+  const groVal = rt.f41 && rt.f41 !== '-' ? Number(rt.f41) : null;
+  const netMarginVal = (revVal && netVal && revVal > 0) ? (netVal / revVal * 100) : null;
+  let roeScore = null, marginScore = null, growthScore = null;
+  if (roeVal !== null && stF && stF.roeMean && stF.roeStd) {
+    roeScore = sectorZToScore((roeVal - stF.roeMean) / stF.roeStd, false);
+  }
+  if (netMarginVal !== null && stF && stF.netMarginMean && stF.netMarginStd) {
+    marginScore = sectorZToScore((netMarginVal - stF.netMarginMean) / stF.netMarginStd, false);
+  }
+  if (groVal !== null && stF && stF.growthMean && stF.growthStd) {
+    growthScore = sectorZToScore((groVal - stF.growthMean) / stF.growthStd, false);
+  }
+  const scoredFactors = [roeScore, marginScore, growthScore].filter(x => x !== null);
+  if (scoredFactors.length >= 2) {
+    fundamentalScore = roeScore * 0.4 + marginScore * 0.3 + growthScore * 0.3;
+  } else if (pe && pe > 0) {
+    // 质量数据不足时退回PE代理分档
+    const earningsYield = 100 / pe;
+    if (earningsYield >= 10) fundamentalScore = 90;
+    else if (earningsYield >= 6) fundamentalScore = 75;
+    else if (earningsYield >= 4) fundamentalScore = 60;
+    else if (earningsYield >= 2) fundamentalScore = 45;
+    else fundamentalScore = 30;
   } else {
-    fundamentalScore = 40; // 亏损或无PE
-    fundamentalDetails.earningsYield = '亏损/无数据';
+    fundamentalScore = 40; // 亏损或无数据
   }
   // 市值加成：大盘股更稳定
   if (totalMv > 1e11) fundamentalScore = Math.min(100, fundamentalScore + 5); // >1000亿
+  fundamentalDetails.roe = roeVal !== null ? roeVal.toFixed(1) + '%' : '--';
+  fundamentalDetails.netMargin = netMarginVal !== null ? netMarginVal.toFixed(1) + '%' : '--';
+  fundamentalDetails.growth = groVal !== null ? (groVal >= 0 ? '+' : '') + groVal.toFixed(1) + '%' : '--';
   fundamentalDetails.pe = pe ? pe.toFixed(1) : '--';
   fundamentalDetails.totalMv = totalMv > 0 ? (totalMv / 1e8).toFixed(0) + '亿' : '--';
 
@@ -2734,19 +2747,39 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
   valuationDetails.pb = pb ? pb.toFixed(2) : '--';
 
   // ===== 3. 资金面评分 (20%) =====
+  // P1: 量比(30%) + 换手(30%) + 主力净流入(40%)
   let capitalScore = 50;
   const capitalDetails = {};
+  let volScore = 50, turnScore = 50, flowScore = 50;
   // 量比：1.2-2.5最佳（温和放量）
-  if (volRatio >= 1.2 && volRatio <= 2.5) capitalScore = 80;
-  else if (volRatio > 0.8 && volRatio < 1.2) capitalScore = 65; // 正常量
-  else if (volRatio > 2.5 && volRatio <= 5) capitalScore = 55;  // 大幅放量
-  else if (volRatio <= 0.8) capitalScore = 45;                  // 缩量
-  else capitalScore = 30;                                       // 巨量
+  if (volRatio >= 1.2 && volRatio <= 2.5) volScore = 80;
+  else if (volRatio > 0.8 && volRatio < 1.2) volScore = 65; // 正常量
+  else if (volRatio > 2.5 && volRatio <= 5) volScore = 55;  // 大幅放量
+  else if (volRatio <= 0.8) volScore = 45;                  // 缩量
+  else volScore = 30;                                       // 巨量
   // 换手率：3-8%最佳
-  if (turnover >= 3 && turnover <= 8) capitalScore = Math.min(100, capitalScore + 10);
-  else if (turnover > 8 && turnover <= 15) capitalScore = Math.max(0, capitalScore - 5);
+  if (turnover >= 3 && turnover <= 8) turnScore = 90;
+  else if (turnover > 1 && turnover < 3) turnScore = 65;
+  else if (turnover > 8 && turnover <= 15) turnScore = 55;
+  else if (turnover > 0.5 && turnover <= 1) turnScore = 50;
+  else turnScore = 35;
+  // 主力净流入：f62/成交额f6，反映真实资金方向
+  const mainFlow = (rt.f62 && rt.f62 !== '-' && rt.f62 !== '') ? Number(rt.f62) : null;
+  const turnoverAmt = (rt.f6 && rt.f6 !== '-' && rt.f6 !== '') ? Number(rt.f6) : null;
+  const flowRatio = (mainFlow !== null && turnoverAmt && turnoverAmt > 0) ? (mainFlow / turnoverAmt) : null;
+  if (flowRatio !== null) {
+    if (flowRatio >= 0.05) flowScore = 95;        // 主力强流入(占成交额5%+)
+    else if (flowRatio >= 0.02) flowScore = 85;   // 明显流入
+    else if (flowRatio >= 0) flowScore = 70;      // 小幅流入
+    else if (flowRatio >= -0.02) flowScore = 50;  // 小幅流出
+    else if (flowRatio >= -0.05) flowScore = 35;  // 明显流出
+    else flowScore = 20;                          // 大幅流出
+  }
+  capitalScore = volScore * 0.3 + turnScore * 0.3 + flowScore * 0.4;
   capitalDetails.volRatio = volRatio.toFixed(2);
   capitalDetails.turnover = turnover.toFixed(2) + '%';
+  capitalDetails.mainFlow = mainFlow !== null ? (mainFlow > 0 ? '+' : '') + (mainFlow / 1e8).toFixed(2) + '亿' : '--';
+  capitalDetails.flowRatio = flowRatio !== null ? (flowRatio >= 0 ? '+' : '') + (flowRatio * 100).toFixed(1) + '%' : '--';
 
   // ===== 4. 技术面评分 (25%) =====
   // 基于7个策略条件的满足数
@@ -2958,7 +2991,7 @@ function checkConditionsUS(stock, rt) {
 }
 
 async function fetchData() {
-  const fields = 'f12,f13,f14,f2,f3,f4,f5,f6,f7,f8,f9,f10,f15,f16,f17,f18,f23,f116,f117';
+  const fields = 'f12,f13,f14,f2,f3,f4,f5,f6,f7,f8,f9,f10,f15,f16,f17,f18,f23,f37,f40,f41,f42,f62,f116,f117';
   // 分批获取A股行情（每批30只，避免URL过长）
   const batchSize = 30;
   const aBatches = [];
@@ -3350,16 +3383,24 @@ function renderData(diff) {
     return Math.round(count / arr.length * 100);
   }
 
-  // 行业中性化统计：按行业计算PE/PB均值与标准差 (P0)
+  // 行业中性化统计：按行业计算PE/PB/ROE/净利率/营收增速均值与标准差 (P0+P1)
   const sectorValuationStats = {};
   watchlist.forEach(s => {
     const d = dataMap[s.secid];
     if (!d) return;
     const peS = d.f9 && d.f9 !== '-' ? Number(d.f9)/100 : null;
     const pbS = d.f23 && d.f23 !== '-' ? Number(d.f23)/100 : null;
-    if (!sectorValuationStats[s.sector]) sectorValuationStats[s.sector] = { peList: [], pbList: [] };
+    const roeS = d.f37 && d.f37 !== '-' ? Number(d.f37) : null;
+    const revS = d.f40 && d.f40 !== '-' ? Number(d.f40) : null;
+    const netS = d.f42 && d.f42 !== '-' ? Number(d.f42) : null;
+    const groS = d.f41 && d.f41 !== '-' ? Number(d.f41) : null;
+    const netMarginS = (revS && netS && revS > 0) ? (netS / revS * 100) : null;
+    if (!sectorValuationStats[s.sector]) sectorValuationStats[s.sector] = { peList: [], pbList: [], roeList: [], netMarginList: [], growthList: [] };
     if (peS && peS > 0 && peS < 500) sectorValuationStats[s.sector].peList.push(peS);
     if (pbS && pbS > 0 && pbS < 100) sectorValuationStats[s.sector].pbList.push(pbS);
+    if (roeS && roeS > -50 && roeS < 80) sectorValuationStats[s.sector].roeList.push(roeS);
+    if (netMarginS && netMarginS > -100 && netMarginS < 100) sectorValuationStats[s.sector].netMarginList.push(netMarginS);
+    if (groS !== null && groS > -100 && groS < 500) sectorValuationStats[s.sector].growthList.push(groS);
   });
   function calcSectorStd(list, mean) {
     if (!list || list.length < 2) return null;
@@ -3372,6 +3413,12 @@ function renderData(diff) {
     sst.pbMean = sst.pbList.length ? sst.pbList.reduce((a,b) => a+b, 0) / sst.pbList.length : null;
     sst.peStd = calcSectorStd(sst.peList, sst.peMean);
     sst.pbStd = calcSectorStd(sst.pbList, sst.pbMean);
+    sst.roeMean = sst.roeList.length ? sst.roeList.reduce((a,b) => a+b, 0) / sst.roeList.length : null;
+    sst.roeStd = calcSectorStd(sst.roeList, sst.roeMean);
+    sst.netMarginMean = sst.netMarginList.length ? sst.netMarginList.reduce((a,b) => a+b, 0) / sst.netMarginList.length : null;
+    sst.netMarginStd = calcSectorStd(sst.netMarginList, sst.netMarginMean);
+    sst.growthMean = sst.growthList.length ? sst.growthList.reduce((a,b) => a+b, 0) / sst.growthList.length : null;
+    sst.growthStd = calcSectorStd(sst.growthList, sst.growthMean);
   });
   window.__sectorStats = sectorValuationStats;
 
@@ -3412,7 +3459,7 @@ function renderData(diff) {
   filteredData = applyQuickFilter(filteredData);
   // 趋势信号统计
   const trendCounts = { golden_cross: 0, bullish: 0, none: 0, bearish: 0, death_cross: 0 };
-  allStocks.forEach(s => {
+  watchlist.forEach(s => {
     const ts = checkTrendSignal(klineCache[s.secid]);
     trendCounts[ts.signal] = (trendCounts[ts.signal] || 0) + 1;
   });
@@ -3516,7 +3563,7 @@ function renderData(diff) {
     }
     if (stock.name && stock.name.includes('ST')) riskTags += '<span class="risk-tag" style="background:#fff1f0;color:#f5222d;border-color:#ffa39e">ST</span>';
     // 趋势跟踪信号（MA5/MA20金叉死叉）
-    const trendSignal = checkTrendSignal(stockKlines);
+    const trendSignal = checkTrendSignal(klineCache[stock.secid]);
     let trendTag = '';
     // 快速信号标记（MA5/20）
     let fastMark = '';
@@ -3561,9 +3608,10 @@ function renderData(diff) {
       if (score.highVol) riskTags.push('<span class="risk-tag risk-vol">高波动</span>');
       if (score.overbought) riskTags.push('<span class="risk-tag risk-ob">过热</span>');
       const tooltip = '质量:' + score.quality + ' 聪明钱:' + score.smartMoney + ' 择时:' + score.timing +
-        '\n波动率:' + (score.qualityDetail.annVol || '?') + '%' +
+        '\nROE:' + (score.qualityDetail.roe || '?') + ' 净利率:' + (score.qualityDetail.netMargin || '?') +
         ' 量比:' + (score.smartMoneyDetail.volRatio || '?') +
-        ' 换手:' + (score.smartMoneyDetail.turnover || '?') + '%';
+        ' 换手:' + (score.smartMoneyDetail.turnover || '?') +
+        ' 主力:' + (score.smartMoneyDetail.flowRatio || '?');
       scoreHtml = '<span class="score-badge ' + scoreClass + '" title="' + tooltip + '">' + s + '</span>' +
         (riskTags.length > 0 ? '<div style="margin-top:2px">' + riskTags.join('') + '</div>' : '');
     } else {
@@ -3589,6 +3637,11 @@ function renderData(diff) {
         }
         const vRatio = rt && rt.f10 ? Number(rt.f10)/100 : 0;
         if (vRatio >= 1.2 && vRatio <= 2.5) reasons.push('<span class="reason-tag reason-vol">温和放量</span>');
+        if (rt && rt.f62 && rt.f6 && rt.f62 !== '-' && rt.f6 !== '-') {
+          const mf = Number(rt.f62), amt = Number(rt.f6);
+          if (amt > 0 && mf / amt >= 0.02) reasons.push('<span class="reason-tag" style="background:rgba(255,77,79,0.15);color:#ff4d4f">主力流入</span>');
+          else if (amt > 0 && mf / amt <= -0.02) reasons.push('<span class="reason-tag" style="background:rgba(38,197,124,0.15);color:#26c57c">主力流出</span>');
+        }
         if (score && score.vetoed) {
           reasons.unshift('<span class="reason-tag" style="background:rgba(255,77,79,0.25);color:#ff4d4f;font-weight:700">否决:' + score.vetoReason + '</span>');
         }
@@ -3988,6 +4041,10 @@ function renderMobileStockCards(stockData) {
     if (s.score && s.score.vetoed) {
       tags += '<span class="msc-tag" style="background:rgba(255,77,79,0.25);color:#ff4d4f;font-weight:700">否决:' + (s.score.vetoReason || '') + '</span>';
     }
+    if (s.rt && s.rt.f62 && s.rt.f6 && s.rt.f62 !== '-' && s.rt.f6 !== '-') {
+      const mf = Number(s.rt.f62), amt = Number(s.rt.f6);
+      if (amt > 0 && mf / amt >= 0.02) tags += '<span class="msc-tag">主力流入</span>';
+    }
     if (vRatio >= 3) tags += '<span class="msc-tag">巨量</span>';
     else if (vRatio >= 2) tags += '<span class="msc-tag green">放量</span>';
     
@@ -4269,13 +4326,13 @@ function openStockDetail(stock, rt) {
     const fd = five.details || {};
     document.getElementById('sdFundamental').textContent = five.fundamental || score.quality || '--';
     document.getElementById('sdFundamentalSub').textContent =
-      'PE:' + (fd.fundamental ? fd.fundamental.pe : '--') + ' 市值:' + (fd.fundamental ? fd.fundamental.totalMv : '--');
+      'ROE:' + (fd.fundamental ? (fd.fundamental.roe || '--') : '--') + ' 净利率:' + (fd.fundamental ? (fd.fundamental.netMargin || '--') : '--') + ' 营收:' + (fd.fundamental ? (fd.fundamental.growth || '--') : '--');
     document.getElementById('sdValuation').textContent = five.valuation || '--';
     document.getElementById('sdValuationSub').textContent =
       'PE:' + (fd.valuation ? fd.valuation.pe : '--') + ' PB:' + (fd.valuation ? fd.valuation.pb : '--');
     document.getElementById('sdCapital').textContent = five.capital || score.smartMoney || '--';
     document.getElementById('sdCapitalSub').textContent =
-      '量比:' + (fd.capital ? fd.capital.volRatio : '--') + ' 换手:' + (fd.capital ? fd.capital.turnover : '--');
+      '量比:' + (fd.capital ? fd.capital.volRatio : '--') + ' 换手:' + (fd.capital ? fd.capital.turnover : '--') + ' 主力:' + (fd.capital ? (fd.capital.mainFlow || '--') : '--') + '(' + (fd.capital ? (fd.capital.flowRatio || '--') : '--') + ')';
     document.getElementById('sdTechnical').textContent = five.technical || score.timing || '--';
     document.getElementById('sdTechnicalSub').textContent =
       '条件:' + (fd.technical ? fd.technical.conditionsMet : (cond.count + '/7'));
