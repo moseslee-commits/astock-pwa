@@ -1000,6 +1000,7 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 <div class="mobile-bottom-nav" style="display:none">
   <a class="mobile-nav-item" href="./mobile.html"><span class="icon">🏠</span>首页</a>
   <a class="mobile-nav-item active" href="./dashboard.html"><span class="icon">📊</span>看板</a>
+  <a class="mobile-nav-item" href="./dashboard.html?view=rightside"><span class="icon">🥇</span>右侧</a>
   <a class="mobile-nav-item" href="./stock-picker.html"><span class="icon">🎯</span>选股</a>
   <a class="mobile-nav-item" href="./portfolio.html"><span class="icon">💼</span>持仓</a>
   <a class="mobile-nav-item" href="./price-alert.html"><span class="icon">🔔</span>预警</a>
@@ -1216,6 +1217,10 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
       <div class="env-item">
         <div class="env-label">涨跌比</div>
         <div class="env-value" id="envAdvDec">--</div>
+      </div>
+      <div class="env-item">
+        <div class="env-label">右侧信号</div>
+        <div class="env-value" id="envRightSignal" title="B档建仓三条件：收复MA20+放量+涨跌比>1">--</div>
       </div>
       <div class="env-item">
         <div class="env-label">仓位建议</div>
@@ -3118,6 +3123,18 @@ async function fetchData() {
 let currentSector = 'all';
 // 右侧首选池：防御高分+动量向上（评分>=62、20日趋势向上、资金偏好），B档右侧信号出现后优先
 const RIGHT_SIDE_POOL = new Set(['601857','600900','601668','600019','600036','600887','601985','601088','601225','600028','000538','000651','600795','600048','600196','000858','600519','000333','000338','000895','600760']);
+// 右侧首选池防御方向板块（动态筛选用）
+const RIGHT_SIDE_SECTORS = ['石油','电力','煤炭','建筑','钢铁','金融','家电','食品饮料','医药','地产'];
+// 动态筛选：评分>=62 + 20日动量>0 + 防御板块（K线未加载完时兜底固定名单）
+function isRightSideItem(item) {
+  if (!item.score || item.score.total === undefined || item.score.total < 62) return false;
+  if (RIGHT_SIDE_SECTORS.indexOf(item.stock.sector) < 0) return false;
+  const ks = klineCache[item.stock.secid];
+  if (!ks || ks.length < 21) return false;
+  const closes = ks.map(function(k) { return k.close; });
+  const chg20 = (closes[closes.length - 1] - closes[closes.length - 21]) / closes[closes.length - 21] * 100;
+  return chg20 > 0;
+}
 let trendFilter = null;
 let currentStrategy = 'five_dim'; // five_dim / trend / hybrid
 const STRATEGY_NAMES = { five_dim: '五维共振', trend: '趋势跟踪', hybrid: '混合策略' };
@@ -3403,6 +3420,17 @@ document.addEventListener('DOMContentLoaded', function() {
       if (lastRealtime) renderData(lastRealtime);
     });
   }
+  // URL参数 ?view=rightside：移动端"右侧"入口自动激活右侧首选视图
+  try {
+    const urlView = new URLSearchParams(location.search).get('view');
+    if (urlView === 'rightside') {
+      currentSector = '__rightside';
+      const allBtn = document.querySelector('.sector-tag[data-sector="all"]');
+      const rsBtn = document.querySelector('.sector-tag[data-sector="__rightside"]');
+      if (allBtn) allBtn.classList.remove('active');
+      if (rsBtn) rsBtn.classList.add('active');
+    }
+  } catch (e) {}
 });
 
 function renderData(diff) {
@@ -3529,7 +3557,9 @@ function renderData(diff) {
   let filteredData = stockData;
   if (currentSector !== 'all') {
     if (currentSector === '__rightside') {
-      filteredData = stockData.filter(s => RIGHT_SIDE_POOL.has(s.stock.code));
+      let dyn = stockData.filter(isRightSideItem);
+      if (dyn.length === 0) dyn = stockData.filter(s => RIGHT_SIDE_POOL.has(s.stock.code));
+      filteredData = dyn;
     } else {
       filteredData = stockData.filter(s => s.stock.sector === currentSector);
     }
@@ -4391,6 +4421,34 @@ function updateMarketEnv(dataMap) {
       '<span style="color:#52c41a;font-weight:600">' + limitDown + '跌停</span>' +
       '<span style="font-size:11px;color:var(--text-sec);margin-left:4px">涨停率' + limitRate + '%</span>';
     limitEl.className = 'env-value ' + (limitUp > limitDown ? 'up' : limitUp < limitDown ? 'down' : 'warn');
+  }
+
+  // 7. 右侧信号（B档三条件：收复MA20 + 放量 + 涨跌比>1）
+  const rsKlines = klineCache['1.000001'];
+  let rsText = '--', rsCls = 'warn', rsTip = '';
+  if (rsKlines && rsKlines.length >= 21) {
+    const rCloses = rsKlines.map(function(k) { return k.close; });
+    const rVols = rsKlines.map(function(k) { return k.volume; });
+    const lastC = rCloses[rCloses.length - 1];
+    const ma20v = calcMA(rCloses, 20);        // 全局版calcMA返回标量
+    let volAvg5 = 0;
+    for (var vi = Math.max(0, rVols.length - 6); vi < rVols.length - 1; vi++) volAvg5 += rVols[vi];
+    volAvg5 = volAvg5 / 5;
+    const condA = ma20v !== null && ma20v !== undefined && lastC > ma20v;  // 收复MA20
+    const condB = rVols[rVols.length - 1] > volAvg5 * 1.1;  // 放量（今日量>5日均量1.1倍）
+    const condC = adv > dec;                  // 涨跌比>1
+    let hit = 0;
+    if (condA) hit++; if (condB) hit++; if (condC) hit++;
+    if (hit === 3) { rsText = '✅B档可建仓'; rsCls = 'up'; }
+    else if (hit === 2) { rsText = '⚠️接近B档'; rsCls = 'warn'; }
+    else { rsText = '⏳等待B档'; rsCls = 'down'; }
+    rsTip = '收复MA20(' + (ma20v !== null && ma20v !== undefined ? ma20v.toFixed(0) : '--') + '):' + (condA ? '✓' : '✗') + ' 放量:' + (condB ? '✓' : '✗') + ' 涨跌比>1:' + (condC ? '✓' : '✗');
+  }
+  const rsEl = document.getElementById('envRightSignal');
+  if (rsEl) {
+    rsEl.textContent = rsText;
+    rsEl.className = 'env-value ' + rsCls;
+    if (rsTip) rsEl.title = rsTip;
   }
 }
 
