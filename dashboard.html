@@ -2945,7 +2945,7 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
   // 从"加权平均"改为"先否决后打分"，模拟CANSLIM要素缺一不可
   let vetoed = false, vetoReason = '';
   // V1: 风险分<40 直接否决
-  if (riskScore < 40) { vetoed = true; vetoReason = '风险分' + Math.round(riskScore) + '<40'; }
+  if (riskScore < 40) { vetoed = true; vetoReason = '风险分' + Math.round(riskScore) + '&lt;40'; }
   // V2: 近5日跌幅>15% 否决
   if (!vetoed && klines && klines.length >= 6) {
     const closesV = klines.map(k => k.close);
@@ -2955,7 +2955,7 @@ function calcFiveDimensionScore(stock, rt, cond, klines, indexChange5d) {
   // V3: ST股否决
   if (!vetoed && stock.name && stock.name.includes('ST')) { vetoed = true; vetoReason = 'ST股'; }
   // V4: 基本面分<30 否决
-  if (!vetoed && fundamentalScore < 30) { vetoed = true; vetoReason = '基本面' + Math.round(fundamentalScore) + '<30'; }
+  if (!vetoed && fundamentalScore < 30) { vetoed = true; vetoReason = '基本面' + Math.round(fundamentalScore) + '&lt;30'; }
 
   if (vetoed) {
     total = Math.min(total, 30); // 否决股总分上限30，排序垫底
