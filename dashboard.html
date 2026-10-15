@@ -613,6 +613,14 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   /* 滚动条隐藏（移动端更美观） */
   .sector-filter::-webkit-scrollbar { display: none; }
   .stock-table-wrap::-webkit-scrollbar { display: none; }
+  
+  /* ===== P3.2 平板适配（481-768px） ===== */
+  .header .params-bar { display: none; }
+  .env-items { grid-template-columns: repeat(3, 1fr); }
+  .section-title { flex-wrap: wrap; row-gap: 6px; }
+  .section-title .copy-btn { margin-left: 0; }
+  .msc-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mobile-nav-item { flex: 1; min-width: 0; }
 }
 
 @media (max-width: 480px) {
@@ -641,6 +649,20 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   .market-env-panel, .sector-rank-panel, .capital-flow-panel { padding: 12px; }
   .anomaly-panel { font-size: 11px; padding: 10px; }
   .anomaly-item { padding: 8px; font-size: 11px; }
+  
+  /* ===== P3.2 移动端比例适配增强 ===== */
+  .header .params-bar { display: none; }
+  .env-items { grid-template-columns: repeat(2, 1fr); gap: 8px 10px; }
+  .env-value { font-size: 13px; }
+  .env-label { font-size: 10px; margin-bottom: 2px; }
+  .section-title { flex-wrap: wrap; row-gap: 6px; }
+  .section-title .copy-btn { margin-left: 0; }
+  .msc-name { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .msc-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .msc-price { min-width: 70px; }
+  .mobile-nav-item { flex: 1; min-width: 0; padding: 6px 2px; }
+  .mobile-stock-card { padding: 10px 12px; }
+  .quick-filter-tag, .sector-tag { padding: 6px 10px; }
 }
 
 /* Stock Detail Modal */
@@ -3624,6 +3646,7 @@ function renderData(diff) {
     html = '<tr><td colspan="13" class="loading">该板块暂无股票</td></tr>';
   }
   filteredData.forEach(({ stock, rt, cond, score }) => {
+    let trendTag = '';  // P3.2修复: !rt分支提前声明,避免TDZ崩溃
     if (!rt) {
       html += '<tr><td class="code">' + stock.code + '</td><td class="name">' + stock.name + trendTag +
         '</td><td class="hide-mobile"><span class="sector">' + stock.sector +
@@ -3677,7 +3700,6 @@ function renderData(diff) {
     if (stock.name && stock.name.includes('ST')) riskTags += '<span class="risk-tag" style="background:#fff1f0;color:#f5222d;border-color:#ffa39e">ST</span>';
     // 趋势跟踪信号（MA5/MA20金叉死叉）
     const trendSignal = checkTrendSignal(klineCache[stock.secid]);
-    let trendTag = '';
     // 快速信号标记（MA5/20）
     let fastMark = '';
     if (trendSignal.fastSignal === 'golden_cross') fastMark = '<span style="font-size:10px;margin-left:2px" title="MA5/20金叉">⚡</span>';
@@ -4176,6 +4198,14 @@ function renderMobileStockCards(stockData) {
     if (rd && rd.maxDrawdown) tags += '<span class="msc-tag" style="background:rgba(255,77,79,0.2);color:#ff4d4f">回撤' + rd.maxDrawdown + '</span>';
     if (rd && rd.downtrend) tags += '<span class="msc-tag" style="background:rgba(255,77,79,0.2);color:#ff4d4f">下跌趋势</span>';
     if (s.score && s.score.highVol) tags += '<span class="msc-tag" style="background:rgba(250,173,20,0.2);color:#faad14">高波动</span>';
+    
+    // P3.2 标签限流：最多显示3个，多余的折叠为 +N
+    if (tags) {
+      const tagArr = tags.match(/<span class="msc-tag[^"]*"[^>]*>[^<]*<\/span>/g);
+      if (tagArr && tagArr.length > 3) {
+        tags = tagArr.slice(0, 3).join('') + '<span class="msc-tag" style="background:rgba(140,140,140,0.2);color:#8c8c8c">+' + (tagArr.length - 3) + '</span>';
+      }
+    }
     
     // 主力资金占比 + ROE（有则显示）
     let flowStr = '';
