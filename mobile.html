@@ -150,6 +150,74 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
 }
 .sheet-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .sheet-btn.danger { color: var(--up); border-color: rgba(255,77,79,0.4); }
+
+/* ===== MOBILE APP UI v3 —— 统一手机端框架（自动注入） ===== */
+/* 平板/手机：底部 Tab 一律显示 */
+@media (max-width: 768px) {
+  .mobile-bottom-nav { display: flex !important; }
+}
+/* 触屏设备：触摸目标 >=44px，输入框 16px 防 iOS 自动缩放 */
+@media (pointer: coarse) {
+  button, .btn, .action-btn, .filter-toggle, .sector-tag, .quick-tag, .tab-btn,
+  .mobile-nav-item, .nav-item, .menu-item { min-height: 44px; }
+  input[type="text"], input[type="number"], input[type="search"], input[type="date"], select, textarea { font-size: 16px !important; }
+}
+/* 手机竖屏精细适配（覆盖 360–480px 主流机型） */
+@media (max-width: 480px) {
+  html { -webkit-text-size-adjust: 100%; }
+  body { padding-left: 0 !important; padding-right: 0 !important; overflow-x: hidden; }
+  .container, .main-layout, .content, .wrap, .page {
+    padding-left: 12px !important; padding-right: 12px !important;
+    max-width: 100vw !important;
+  }
+  .header { padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important; }
+  .header h1 { font-size: 18px !important; line-height: 1.3; }
+  .header .sub, .header .subtitle { font-size: 11px !important; line-height: 1.45; }
+  .stats-bar, .stats-grid, .summary-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+  .card, .panel, .stat-card, .strategy-card, .alert-card, .position-card, .result-card, .menu-list {
+    border-radius: 12px !important;
+  }
+  table { font-size: 12px !important; }
+  th { font-size: 11px !important; padding: 8px 5px !important; }
+  td { padding: 9px 5px !important; }
+  button, .btn { font-size: 13px !important; min-height: 40px; }
+  /* 底部 Tab：5 项均分，图标+文字，安全区留白 */
+  .mobile-bottom-nav {
+    display: flex !important;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    align-items: stretch; justify-content: space-around;
+    background: rgba(18,23,32,0.97);
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.09);
+    padding: 5px 2px calc(5px + env(safe-area-inset-bottom, 0px));
+    z-index: 1000; box-shadow: 0 -6px 24px rgba(0,0,0,0.35);
+  }
+  .mobile-nav-item {
+    flex: 1 1 0 !important; min-width: 0 !important;
+    display: flex !important; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1px; padding: 3px 0 !important; min-height: 46px;
+    font-size: 10.5px !important; font-weight: 600; letter-spacing: 0;
+    color: #8b95a7; text-decoration: none; position: relative;
+  }
+  .mobile-nav-item .icon { font-size: 20px !important; line-height: 1.1; }
+  .mobile-nav-item.active { color: #6366f1 !important; }
+  .mobile-nav-item.active::before {
+    content: ''; position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+    width: 20px; height: 3px; border-radius: 0 0 3px 3px; background: #6366f1;
+  }
+  /* mobile.html 自有 bottom-nav 也均分 */
+  .bottom-nav .nav-item { flex: 1 1 0; min-width: 0 !important; padding: 6px 0 !important; }
+  .bottom-nav .nav-item .icon { font-size: 20px; }
+  .bottom-nav .nav-item .label { font-size: 10.5px; }
+}
+/* 超窄屏（iPhone SE / 小屏安卓）进一步收敛 */
+@media (max-width: 390px) {
+  .header h1 { font-size: 17px !important; }
+  .mobile-nav-item { font-size: 10px !important; }
+  .mobile-nav-item .icon { font-size: 19px !important; }
+  th, td { padding-left: 4px !important; padding-right: 4px !important; }
+}
+/* ===== /MOBILE APP UI v3 ===== */
 </style>
 </head>
 <body>
@@ -243,18 +311,11 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
 
 <!-- 底部导航 -->
 <div class="bottom-nav">
-    <a class="nav-item" href="./dashboard.html">
-        <span class="icon">📊</span><span class="label">看板</span>
-    </a>
-    <a class="nav-item" href="./stock-picker.html">
-        <span class="icon">🎯</span><span class="label">选股</span>
-    </a>
-    <a class="nav-item" href="./portfolio.html">
-        <span class="icon">💼</span><span class="label">持仓</span>
-    </a>
-    <a class="nav-item active" href="./mobile.html">
-        <span class="icon">👤</span><span class="label">我的</span>
-    </a>
+  <a class="nav-item" href="./dashboard.html"><span class="icon">📊</span><span class="label">看板</span></a>
+  <a class="nav-item" href="./stock-picker.html"><span class="icon">🎯</span><span class="label">选股</span></a>
+  <a class="nav-item" href="./portfolio.html"><span class="icon">💼</span><span class="label">持仓</span></a>
+  <a class="nav-item" href="./price-alert.html"><span class="icon">🔔</span><span class="label">预警</span></a>
+  <a class="nav-item active" href="./mobile.html"><span class="icon">👤</span><span class="label">我的</span></a>
 </div>
 
 <!-- About Sheet -->
