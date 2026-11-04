@@ -590,10 +590,6 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
   .mobile-nav-item.active { color: var(--accent); }
   
   /* 悬浮按钮优化 */
-  .wechat-float-btn {
-    width: 48px; height: 48px; font-size: 22px;
-    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-  }
   
   /* 搜索框优化 */
   .search-box { padding: 10px 14px; font-size: 14px; border-radius: 20px; }
@@ -666,31 +662,6 @@ body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei"
 }
 
 /* Stock Detail Modal */
-.wechat-float-btn {
-  position: fixed;
-  right: 20px;
-  bottom: 24px;
-  z-index: 999;
-  background: #07c160;
-  color: #fff;
-  border: none;
-  border-radius: 50px;
-  padding: 10px 18px 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(7, 193, 96, 0.4);
-  transition: all 0.25s;
-}
-.wechat-float-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(7, 193, 96, 0.5);
-}
-.wechat-float-text {
-  font-size: 13px;
-  font-weight: 600;
-}
 .wechat-modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.7);
@@ -1835,15 +1806,6 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
   </div>
 </div>
 
-<!-- 微信悬浮按钮 -->
-<div class="wechat-float-btn" id="wechatFloatBtn" title="添加微信获取选股服务">
-  <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-    <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.27-.027-.407-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>
-  </svg>
-  <span class="wechat-float-text">微信选股</span>
-</div>
-
-<!-- 微信弹窗 -->
 <!-- 策略说明弹窗 -->
 <div class="wechat-modal-overlay" id="strategyHelpModal" onclick="if(event.target===this)this.classList.remove('active')">
   <div class="wechat-modal" style="max-width:560px">
@@ -1860,75 +1822,6 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
       <button onclick="cycleStrategy();updateStrategyHelp();" style="flex:1;padding:8px;background:var(--accent);border:none;color:#fff;border-radius:6px;cursor:pointer;font-weight:600">切换策略</button>
       <button onclick="document.getElementById('strategyHelpModal').classList.remove('active')" style="flex:1;padding:8px;background:none;border:1px solid var(--border);color:var(--text-sec);border-radius:6px;cursor:pointer">关闭</button>
     </div>
-  </div>
-</div>
-
-<div class="wechat-modal-overlay" id="wechatModal">
-  <div class="wechat-modal">
-    <button class="wechat-modal-close" id="wechatModalClose">&times;</button>
-    <div class="wechat-modal-title">添加微信 · 获取选股服务</div>
-    <div class="wechat-qrcode-area">
-      <div class="wechat-qrcode-placeholder">
-        <svg viewBox="0 0 100 100" width="140" height="140">
-          <rect width="100" height="100" fill="#fff"/>
-          <rect x="5" y="5" width="25" height="25" fill="none" stroke="#07c160" stroke-width="3"/>
-          <rect x="10" y="10" width="15" height="15" fill="#07c160"/>
-          <rect x="70" y="5" width="25" height="25" fill="none" stroke="#07c160" stroke-width="3"/>
-          <rect x="75" y="10" width="15" height="15" fill="#07c160"/>
-          <rect x="5" y="70" width="25" height="25" fill="none" stroke="#07c160" stroke-width="3"/>
-          <rect x="10" y="75" width="15" height="15" fill="#07c160"/>
-          <rect x="40" y="10" width="8" height="8" fill="#07c160"/>
-          <rect x="52" y="15" width="6" height="6" fill="#07c160"/>
-          <rect x="40" y="25" width="10" height="4" fill="#07c160"/>
-          <rect x="55" y="30" width="8" height="8" fill="#07c160"/>
-          <rect x="35" y="40" width="6" height="6" fill="#07c160"/>
-          <rect x="45" y="45" width="10" height="10" fill="#07c160"/>
-          <rect x="60" y="42" width="6" height="6" fill="#07c160"/>
-          <rect x="72" y="50" width="8" height="8" fill="#07c160"/>
-          <rect x="40" y="60" width="8" height="8" fill="#07c160"/>
-          <rect x="55" y="65" width="6" height="6" fill="#07c160"/>
-          <rect x="68" y="70" width="10" height="4" fill="#07c160"/>
-          <rect x="45" y="75" width="6" height="6" fill="#07c160"/>
-          <rect x="58" y="80" width="8" height="8" fill="#07c160"/>
-          <rect x="75" y="75" width="6" height="6" fill="#07c160"/>
-          <rect x="40" y="88" width="10" height="4" fill="#07c160"/>
-        </svg>
-        <div class="wechat-qrcode-hint">扫码添加微信</div>
-      </div>
-    </div>
-    <div class="wechat-tabs">
-      <button class="wechat-tab active" data-wtab="wechat">个人微信</button>
-      <button class="wechat-tab" data-wtab="dashboard">访问看板</button>
-    </div>
-    <div class="wechat-tab-content" id="wtabWechat">
-      <div class="wechat-info">
-        <div class="wechat-id">微信号：<strong>YourWeChatID</strong></div>
-        <div class="wechat-desc">添加微信备注「选股」，获取：</div>
-        <ul class="wechat-benefits">
-          <li>每日尾盘精选股票池</li>
-          <li>三因子评分个股解读</li>
-          <li>大盘环境与仓位建议</li>
-          <li>策略回测与参数优化</li>
-        </ul>
-      </div>
-    </div>
-    <div class="wechat-tab-content" id="wtabDashboard" style="display:none">
-      <div class="dashboard-qr-area">
-        <img id="dashboardQrImg" src="" alt="看板访问二维码" style="width:160px;height:160px;background:#fff;border-radius:8px;padding:8px;">
-        <div class="wechat-qrcode-hint" id="dashboardQrHint">正在获取公网地址...</div>
-      </div>
-      <div class="wechat-info">
-        <div class="wechat-desc">微信扫码直接打开选股看板，随时随地查看：</div>
-        <ul class="wechat-benefits">
-          <li>全市场40只龙头实时行情</li>
-          <li>三因子综合评分排序</li>
-          <li>个股分时图与日K线</li>
-          <li>大盘环境与仓位建议</li>
-        </ul>
-        <div class="wechat-url" id="dashboardUrlText">--</div>
-      </div>
-    </div>
-    <div class="wechat-replace-hint">提示：个人微信二维码需替换SVG；看板二维码由花生壳公网地址自动生成</div>
   </div>
 </div>
 
@@ -6449,19 +6342,9 @@ async function fetchTunnelStatus() {
     if (tunnelData.enabled) {
       dot.className = 'tunnel-dot online';
       text.textContent = '公网可访问';
-      // Update dashboard QR
-      const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(tunnelData.page_url);
-      const qrImg = document.getElementById('dashboardQrImg');
-      if (qrImg) qrImg.src = qrUrl;
-      const qrHint = document.getElementById('dashboardQrHint');
-      if (qrHint) qrHint.textContent = '微信扫码访问选股看板';
-      const urlText = document.getElementById('dashboardUrlText');
-      if (urlText) urlText.textContent = tunnelData.page_url;
     } else {
       dot.className = 'tunnel-dot offline';
       text.textContent = '本地模式';
-      const qrHint = document.getElementById('dashboardQrHint');
-      if (qrHint) qrHint.textContent = '未配置花生壳穿透，请先配置';
     }
   } catch(e) {
     const dot = document.getElementById('tunnelDot');
@@ -6470,42 +6353,6 @@ async function fetchTunnelStatus() {
     if (text) text.textContent = '本地模式';
   }
 }
-// Click tunnel status to open wechat modal (dashboard tab)
-document.addEventListener('click', function(e) {
-  const ts = e.target.closest('.tunnel-status');
-  if (ts) {
-    document.getElementById('wechatModal').classList.add('active');
-    switchWechatTab('dashboard');
-  }
-});
-
-// WeChat modal tab switching
-function switchWechatTab(tab) {
-  document.querySelectorAll('.wechat-tab').forEach(t => t.classList.remove('active'));
-  document.querySelector('.wechat-tab[data-wtab="' + tab + '"]').classList.add('active');
-  document.getElementById('wtabWechat').style.display = tab === 'wechat' ? 'block' : 'none';
-  document.getElementById('wtabDashboard').style.display = tab === 'dashboard' ? 'block' : 'none';
-}
-document.querySelectorAll('.wechat-tab').forEach(tab => {
-  tab.addEventListener('click', function() {
-    switchWechatTab(this.dataset.wtab);
-  });
-});
-
-// WeChat modal
-document.getElementById('wechatFloatBtn').addEventListener('click', function() {
-  document.getElementById('wechatModal').classList.add('active');
-});
-document.getElementById('wechatModalClose').addEventListener('click', function() {
-  document.getElementById('wechatModal').classList.remove('active');
-});
-document.getElementById('wechatModal').addEventListener('click', function(e) {
-  if (e.target === this) this.classList.remove('active');
-});
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') document.getElementById('wechatModal').classList.remove('active');
-});
-
 // Init
 fetchTunnelStatus();
 updateMarketStatus();
