@@ -1,7 +1,0 @@
-[main 4b41b1a] feat(pwa): remove WeChat entry + version management v4.7.0
- 4 files changed, 54 insertions(+), 156 deletions(-)
- create mode 100644 CHANGELOG.md
- create mode 100644 VERSION
-To https://github.com/moseslee-commits/astock-pwa.git
-   cdeae72..4b41b1a  main -> main
-EXIT=0
