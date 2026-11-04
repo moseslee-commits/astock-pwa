@@ -267,6 +267,21 @@ tr:hover { background: rgba(99,102,241,0.05); }
   .mobile-nav-item .icon { font-size: 19px !important; }
   th, td { padding-left: 4px !important; padding-right: 4px !important; }
 }
+
+/* ===== MOBILE APP UI v3.1 表格横滑 ===== */
+@media (max-width: 768px) {
+  .m-table-scroll {
+    overflow-x: auto; overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    margin: 0 -2px;
+    padding: 0 2px;
+  }
+  .m-table-scroll table { min-width: 100%; }
+  .m-table-scroll::-webkit-scrollbar { height: 4px; }
+  .m-table-scroll::-webkit-scrollbar-thumb { background: rgba(120,130,150,0.45); border-radius: 2px; }
+}
+/* ===== /MOBILE APP UI v3.1 ===== */
 /* ===== /MOBILE APP UI v3 ===== */
 </style>
     <link rel="manifest" href="./manifest.json">
@@ -757,6 +772,42 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
   if (nav) nav.style.display = 'flex';
   document.body.style.paddingBottom = 'calc(70px + env(safe-area-inset-bottom,0px))';
 }
+</script>
+
+
+<script>
+/* MOBILE APP UI v3.2 —— 表格横向滚动容器（支持动态渲染，幂等） */
+(function () {
+  var busy = false;
+  function wrapTables() {
+    if (busy || window.innerWidth > 768) return;
+    busy = true;
+    try {
+      var tables = document.querySelectorAll('table');
+      for (var i = 0; i < tables.length; i++) {
+        var t = tables[i];
+        if (!t.parentNode) continue;
+        if (t.closest && t.closest('.m-table-scroll')) continue;
+        var w = document.createElement('div');
+        w.className = 'm-table-scroll';
+        t.parentNode.insertBefore(w, t);
+        w.appendChild(t);
+      }
+    } finally { busy = false; }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wrapTables);
+  } else {
+    wrapTables();
+  }
+  window.addEventListener('resize', wrapTables);
+  try {
+    new MutationObserver(function () {
+      clearTimeout(window.__mtsTimer);
+      window.__mtsTimer = setTimeout(wrapTables, 150);
+    }).observe(document.body, { childList: true, subtree: true });
+  } catch (e) {}
+})();
 </script>
 
 </body>
