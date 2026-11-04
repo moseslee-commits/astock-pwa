@@ -3177,7 +3177,7 @@ function checkConditionsUS(stock, rt) {
 }
 
 async function fetchData() {
-  const fields = 'f12,f13,f14,f2,f3,f4,f5,f6,f7,f8,f9,f10,f15,f16,f17,f18,f23,f37,f40,f41,f42,f62,f116,f117';
+  const fields = 'f12,f13,f14,f2,f3,f4,f5,f6,f7,f8,f9,f10,f15,f16,f17,f18,f20,f21,f23,f37,f40,f41,f42,f62,f116,f117';
   // 分批获取A股行情（每批30只，避免URL过长）
   const batchSize = 30;
   const aBatches = [];
@@ -4229,16 +4229,22 @@ async function fetchCapitalFlow() {
 function renderMobileStockCards(stockData) {
   const container = document.getElementById('mobileStockList');
   if (!container) return;
+  if (!window.__mobileShowAll) window.__mobileRawData = stockData;
   
   // 右侧首选池过滤（与桌面板块筛选联动）
   if (currentSector === '__rightside') {
     stockData = stockData.filter(s => RIGHT_SIDE_POOL.has(s.stock.code));
+  } else if (currentSector && currentSector !== 'all') {
+    // P4.2 修复：普通板块筛选同步到手机卡片（原仅表格生效）
+    stockData = stockData.filter(s => s.stock.sector === currentSector);
   }
   const valid = stockData.filter(s => s.rt && s.rt.f3 !== undefined);
   valid.sort((a, b) => (Number(b.rt.f3) || 0) - (Number(a.rt.f3) || 0));
   
   let html = '';
-  valid.slice(0, 50).forEach(s => {
+  // P4.2：首屏 60 只，剩余可一键展开，保证完整可达
+  const __shown = window.__mobileShowAll ? valid : valid.slice(0, 60);
+  __shown.forEach(s => {
     const d = s.rt;
     const stock = s.stock;
     const price = Number(d.f2 || 0);
@@ -4315,6 +4321,19 @@ function renderMobileStockCards(stockData) {
   });
   
   container.innerHTML = html;
+  if (!window.__mobileShowAll && valid.length > 60) {
+    const more = document.createElement('button');
+    more.className = 'm-load-more';
+    more.textContent = '展开全部 ' + valid.length + ' 只';
+    more.style.cssText = 'width:100%;margin:12px 0 24px;padding:13px;border-radius:10px;' +
+      'border:1px solid rgba(120,140,180,.35);background:rgba(30,40,58,.6);color:#9fb4d0;' +
+      'font-size:14px;letter-spacing:.5px;';
+    more.onclick = function () {
+      window.__mobileShowAll = true;
+      renderMobileStockCards(window.__mobileRawData || []);
+    };
+    container.appendChild(more);
+  }
 }
 
 function renderCapitalFlow(data) {
@@ -6534,6 +6553,129 @@ setInterval(fetchCapitalFlow, 60000);
     }).observe(document.body, { childList: true, subtree: true });
   } catch (e) {}
 })();
+</script>
+
+
+<!-- ===== 个股详情弹层 (P4.4) ===== -->
+<style>
+.sd-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9100;opacity:0;pointer-events:none;transition:opacity .2s}
+.sd-overlay.show{opacity:1;pointer-events:auto}
+.sd-sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(105%);width:100%;max-width:520px;max-height:82vh;overflow-y:auto;background:var(--card,#1a1f2e);border-radius:18px 18px 0 0;padding:10px 16px calc(16px + env(safe-area-inset-bottom));z-index:9101;box-sizing:border-box;transition:transform .26s ease;border-top:1px solid var(--border,#2a3142)}
+.sd-sheet.show{transform:translateX(-50%) translateY(0)}
+.sd-handle{width:36px;height:4px;border-radius:2px;background:var(--border,#2a3142);margin:0 auto 14px}
+.sd-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.sd-name{font-size:18px;font-weight:700;color:var(--text,#e0e6ed)}
+.sd-meta{font-size:12px;color:#7d8ba1;margin-top:4px}
+.sd-score{font-size:26px;font-weight:800;line-height:1}
+.sd-score.good{color:#ff4d4f}
+.sd-score.mid{color:#faad14}
+.sd-score.low{color:#8b98ad}
+.sd-score-tag{font-size:11px;color:#7d8ba1;text-align:right;margin-top:4px}
+.sd-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-bottom:14px}
+.sd-cell{background:rgba(255,255,255,.03);border-radius:9px;padding:9px 10px}
+.sd-k{font-size:11px;color:#7d8ba1;margin-bottom:3px}
+.sd-v{font-size:14px;font-weight:600;color:var(--text,#e0e6ed)}
+.sd-dims{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.sd-actions{display:flex;gap:10px}
+.sd-actions button{flex:1;min-height:46px;border-radius:11px;border:none;font-size:15px;font-weight:600}
+.sd-fav{background:var(--up,#ff4d4f);color:#fff}
+.sd-close{background:#20283a;color:#9fb4d0}
+</style>
+<div class="sd-overlay" id="sdOverlay" onclick="closeStockDetail()"></div>
+<div class="sd-sheet" id="sdSheet">
+  <div class="sd-handle"></div>
+  <div class="sd-head">
+    <div><div class="sd-name" id="sdName"></div><div class="sd-meta" id="sdMeta"></div></div>
+    <div><div class="sd-score" id="sdScore"></div><div class="sd-score-tag">五维综合分</div></div>
+  </div>
+  <div class="sd-grid" id="sdGrid"></div>
+  <div class="sd-dims" id="sdDims"></div>
+  <div class="sd-actions">
+    <button class="sd-fav" id="sdFavBtn">+ 加入自选</button>
+    <button class="sd-close" onclick="closeStockDetail()">关闭</button>
+  </div>
+</div>
+<script>
+var __sdSecid = '';
+function __sdNum(v, d) {
+  if (v === undefined || v === null || v === '' || isNaN(v)) return '--';
+  return Number(v).toFixed(d === undefined ? 2 : d);
+}
+function closeStockDetail() {
+  document.getElementById('sdOverlay').classList.remove('show');
+  document.getElementById('sdSheet').classList.remove('show');
+}
+function showStockDetail(secid) {
+  try {
+    __sdSecid = secid;
+    var meta = (typeof watchlist !== 'undefined' ? watchlist : []).filter(function (s) { return s.secid === secid; })[0] || null;
+    var rt = (typeof lastRealtime !== 'undefined' && lastRealtime ? lastRealtime : [])
+      .filter(function (x) { return (x.f13 + '.' + x.f12) === secid; })[0] || null;
+    if (!meta && !rt) { if (typeof showToast === 'function') showToast('暂无该股数据'); return; }
+
+    var name = (rt && rt.f14) || (meta && meta.name) || secid;
+    var code = (rt && rt.f12) || (meta && meta.code) || '';
+    var sector = (meta && meta.sector) || '';
+    document.getElementById('sdName').textContent = name;
+    document.getElementById('sdMeta').textContent = code + (sector ? ' · ' + sector : '');
+
+    var scoreEl = document.getElementById('sdScore');
+    var dims = [];
+    if (rt && meta && typeof calcCompositeScore === 'function') {
+      try {
+        var cond = checkConditions(meta, rt);
+        var k = (typeof klineCache !== 'undefined' ? klineCache[secid] : null);
+        var sc = calcCompositeScore(meta, rt, cond, k, null);
+        var t = Math.round(sc.total);
+        scoreEl.textContent = t;
+        scoreEl.className = 'sd-score ' + (t >= 60 ? 'good' : (t >= 45 ? 'mid' : 'low'));
+        dims = [['基本面', sc.fundamental], ['估值', sc.valuation], ['资金', sc.capital],
+                ['技术', sc.technical], ['风险', sc.risk]];
+      } catch (e) { scoreEl.textContent = '--'; }
+    } else { scoreEl.textContent = '--'; }
+
+    var m = rt ? rt.f13 : 0;
+    var PR = function (v) { return (v === '-' || v === null || v === undefined) ? '--' : ((typeof fmtPrice === 'function') ? fmtPrice(v, m) : __sdNum(Number(v) / 100, 2)); };
+    var PC = function (v) { return (v === '-' || v === null || v === undefined) ? '--' : ((typeof fmtPct === 'function') ? fmtPct(v) : __sdNum(Number(v) / 100, 2) + '%'); };
+    var RT = function (v, d) { return (v === '-' || v === null || v === undefined) ? '--' : (Number(v) / 100).toFixed(d === undefined ? 2 : d); };
+    var cells = [
+      ['现价', rt ? PR(rt.f2) : '--'],
+      ['涨跌幅', rt ? PC(rt.f3) : '--'],
+      ['今开', rt ? PR(rt.f17) : '--'],
+      ['昨收', rt ? PR(rt.f18) : '--'],
+      ['最高', rt ? PR(rt.f15) : '--'],
+      ['最低', rt ? PR(rt.f16) : '--'],
+      ['换手率', rt ? RT(rt.f8) + '%' : '--'],
+      ['量比', rt ? RT(rt.f10) : '--'],
+      ['成交额', rt && rt.f6 && rt.f6 !== '-' ? __sdNum(Number(rt.f6) / 1e8, 2) + '亿' : '--'],
+      ['市盈率', rt ? RT(rt.f9) : '--'],
+      ['市净率', rt ? RT(rt.f23) : '--'],
+      ['总市值', rt && (Number(rt.f20) || Number(rt.f116)) ? __sdNum((Number(rt.f20) || Number(rt.f116)) / 1e8, 0) + '亿' : '--']
+    ];
+    var g = '';
+    cells.forEach(function (c) {
+      g += '<div class="sd-cell"><div class="sd-k">' + c[0] + '</div><div class="sd-v">' + c[1] + '</div></div>';
+    });
+    document.getElementById('sdGrid').innerHTML = g;
+
+    var dh = '';
+    dims.forEach(function (d) {
+      var v = (d[1] === undefined || d[1] === null || isNaN(d[1])) ? '--' : Number(d[1]).toFixed(1);
+      dh += '<div class="sd-cell"><div class="sd-k">' + d[0] + '</div><div class="sd-v">' + v + '</div></div>';
+    });
+    document.getElementById('sdDims').innerHTML = dh;
+
+    document.getElementById('sdFavBtn').onclick = function () {
+      if (typeof toggleFavorite === 'function') { toggleFavorite(__sdSecid); }
+      else if (typeof showToast === 'function') { showToast('自选功能不可用'); }
+    };
+
+    document.getElementById('sdOverlay').classList.add('show');
+    document.getElementById('sdSheet').classList.add('show');
+  } catch (err) {
+    if (typeof showToast === 'function') showToast('详情加载失败');
+  }
+}
 </script>
 
 </body>

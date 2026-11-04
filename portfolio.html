@@ -486,10 +486,19 @@ function addPosition() {
     showToast('持仓添加成功');
 }
 
-function sellPosition(code) {
+async function sellPosition(code) {
     const pos = positions.find(p => p.code === code);
     if (!pos) return;
-    const sellShares = parseInt(prompt(`卖出 ${pos.name}(${code})\n当前持仓: ${pos.shares}股\n现价: ${priceCache[code]?.toFixed(2) || pos.cost.toFixed(2)}\n\n卖出数量:`, pos.shares));
+    const __cur = priceCache[code] || pos.cost;
+    const __dlg = await appDialog({
+        title: '卖出 ' + pos.name,
+        msg: '持仓 ' + pos.shares + ' 股 · 成本 ' + pos.cost.toFixed(2) +
+             '\n现价 ' + __cur.toFixed(2) + ' · 市值 ' + (__cur * pos.shares).toFixed(0),
+        input: true, quick: true, max: pos.shares,
+        value: String(pos.shares), okText: '确认卖出'
+    });
+    if (!__dlg.ok) return;
+    const sellShares = parseInt(__dlg.value);
     if (!sellShares || sellShares <= 0) return;
     if (sellShares > pos.shares) { showToast('卖出数量超过持仓', 'error'); return; }
 
@@ -509,8 +518,8 @@ function sellPosition(code) {
     showToast(`卖出成功，盈亏: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}`);
 }
 
-function deletePosition(code) {
-    if (!confirm('确定删除该持仓记录吗？（不影响资金）')) return;
+async function deletePosition(code) {
+    if (!(await appConfirm('删除持仓', '确定删除该持仓记录吗？（不影响资金）', true))) return;
     positions = positions.filter(p => p.code !== code);
     saveData();
     render();
@@ -808,6 +817,76 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     }).observe(document.body, { childList: true, subtree: true });
   } catch (e) {}
 })();
+</script>
+
+
+<!-- ===== APP DIALOG (P4.3) ===== -->
+<style>
+.ad-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;opacity:0;pointer-events:none;transition:opacity .2s}
+.ad-overlay.show{opacity:1;pointer-events:auto}
+.ad-sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(105%);width:100%;max-width:520px;background:var(--card,#1a1f2e);border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));z-index:9001;transition:transform .26s ease;box-sizing:border-box;border-top:1px solid var(--border,#2a3142)}
+.ad-sheet.show{transform:translateX(-50%) translateY(0)}
+.ad-title{font-size:16px;font-weight:600;color:var(--text,#e0e6ed);margin-bottom:8px}
+.ad-msg{font-size:13px;line-height:1.7;color:#8b98ad;white-space:pre-line;margin-bottom:14px}
+.ad-input{display:none;width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border,#2a3142);background:#11151c;color:#fff;font-size:16px;margin-bottom:12px}
+.ad-quick{display:none;gap:8px;margin-bottom:14px}
+.ad-quick button{flex:1;min-height:40px;border-radius:9px;border:1px solid var(--border,#2a3142);background:transparent;color:#9fb4d0;font-size:13px}
+.ad-btns{display:flex;gap:10px}
+.ad-btns button{flex:1;min-height:46px;border-radius:11px;border:none;font-size:15px;font-weight:600}
+.ad-cancel{background:#20283a;color:#9fb4d0}
+.ad-ok{background:var(--accent,#6366f1);color:#fff}
+</style>
+<div class="ad-overlay" id="adOverlay"></div>
+<div class="ad-sheet" id="adSheet">
+  <div class="ad-title" id="adTitle"></div>
+  <div class="ad-msg" id="adMsg"></div>
+  <input class="ad-input" id="adInput" type="number" step="1">
+  <div class="ad-quick" id="adQuick">
+    <button type="button" onclick="__adQuick(0.25)">1/4</button>
+    <button type="button" onclick="__adQuick(0.5)">1/2</button>
+    <button type="button" onclick="__adQuick(1)">全部</button>
+  </div>
+  <div class="ad-btns">
+    <button class="ad-cancel" onclick="__adClose(false)">取消</button>
+    <button class="ad-ok" id="adOkBtn" onclick="__adClose(true)">确定</button>
+  </div>
+</div>
+<script>
+var __adRes = null, __adMax = 0;
+function appDialog(opt) {
+  return new Promise(function (resolve) {
+    __adRes = resolve;
+    document.getElementById('adTitle').textContent = opt.title || '';
+    document.getElementById('adMsg').textContent = opt.msg || '';
+    var inp = document.getElementById('adInput');
+    var q = document.getElementById('adQuick');
+    __adMax = opt.max || 0;
+    inp.style.display = opt.input ? 'block' : 'none';
+    inp.value = opt.value || '';
+    q.style.display = (opt.input && opt.quick) ? 'flex' : 'none';
+    var ok = document.getElementById('adOkBtn');
+    ok.textContent = opt.okText || '确定';
+    ok.style.background = opt.danger ? '#e5484d' : '';
+    document.getElementById('adOverlay').classList.add('show');
+    document.getElementById('adSheet').classList.add('show');
+  });
+}
+function __adQuick(ratio) {
+  var inp = document.getElementById('adInput');
+  if (__adMax) inp.value = String(Math.floor(__adMax * ratio));
+}
+function __adClose(ok) {
+  var inp = document.getElementById('adInput');
+  var isInput = inp.style.display !== 'none';
+  document.getElementById('adOverlay').classList.remove('show');
+  document.getElementById('adSheet').classList.remove('show');
+  var r = __adRes; __adRes = null;
+  if (r) r({ ok: ok, value: isInput ? inp.value : null });
+}
+function appConfirm(title, msg, danger) {
+  return appDialog({ title: title, msg: msg, danger: danger })
+    .then(function (r) { return !!r.ok; });
+}
 </script>
 
 </body>
