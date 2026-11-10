@@ -271,7 +271,7 @@ body {
 <div class="header">
   <div>
     <h1>🎯 智能选股器</h1>
-    <div class="subtitle">五维共振选股体系 · 多条件组合筛选 · 81只全市场龙头</div>
+    <div class="subtitle">五维共振 · 精选版｜四条件加减分（PE / 涨跌 / 量比 / 成交额）+ 均线门槛｜75只龙头池</div>
   </div>
   <div>
     <button class="btn btn-secondary" onclick="resetFilters()">重置条件</button>
@@ -288,7 +288,7 @@ body {
   </div>
   <div class="strategy-card" data-strategy="balanced" onclick="selectStrategy(this)">
     <div class="strategy-name">⚖️ 稳健型</div>
-    <div class="strategy-desc">五维均衡+评分≥70</div>
+    <div class="strategy-desc">四条件均衡+评分≥70</div>
   </div>
   <div class="strategy-card" data-strategy="aggressive" onclick="selectStrategy(this)">
     <div class="strategy-name">🚀 激进型</div>
@@ -300,7 +300,7 @@ body {
 <div class="stats-bar">
   <div class="stat-card">
     <div class="stat-label">股票池总数</div>
-    <div class="stat-value" id="totalCount">81</div>
+    <div class="stat-value" id="totalCount">75</div>
   </div>
   <div class="stat-card">
     <div class="stat-label">符合条件</div>
@@ -331,7 +331,7 @@ body {
     </div>
 
     <div class="filter-section">
-      <div class="filter-title">⭐ 五维评分</div>
+      <div class="filter-title">⭐ 评分（四条件）</div>
       <div class="filter-row">
         <div class="filter-label">综合评分区间</div>
         <div class="range-row">

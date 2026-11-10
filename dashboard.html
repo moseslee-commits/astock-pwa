@@ -1012,6 +1012,14 @@ html, body { max-width: 100%; overflow-x: hidden; }
 /* 平板/手机：底部 Tab 一律显示 */
 @media (max-width: 768px) {
   .mobile-bottom-nav { display: flex !important; }
+  .header { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; padding: 12px 14px !important; }
+  .header h1 { font-size: 17px !important; line-height: 1.35 !important; }
+  .header-right { width: 100% !important; flex-wrap: wrap !important; gap: 8px 12px !important; justify-content: flex-start !important; align-items: center !important; }
+  .header-right > * { flex: 0 0 auto !important; }
+  .header-right span, .header-right label { white-space: nowrap !important; }
+  .header-right .search-box { flex: 1 1 100% !important; min-width: 0 !important; }
+  .header-right .search-box input { width: 100% !important; }
+  .params-bar { flex-wrap: wrap !important; gap: 6px !important; }
 }
 /* 触屏设备：触摸目标 >=44px，输入框 16px 防 iOS 自动缩放 */
 @media (pointer: coarse) {
@@ -1412,7 +1420,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     <button class="sector-tag" data-sector="电力">电力</button>
     <button class="sector-tag" data-sector="电子制造">电子制造</button>
   </div>
-  <div class="section-title">全市场选股 <span class="count-hint">81只龙头 · 23个板块 · 五维共振评分排序</span>
+  <div class="section-title">全市场选股 <span class="count-hint">龙头池 · 五维共振参考分排序（含实时资金流，不可回测）</span>
     <button class="copy-btn" id="copyBtn" onclick="copyStockList()">复制选股</button>
     <button class="copy-btn history-btn" onclick="oneClickSelect()" style="background:var(--up);color:#fff;border-color:var(--up)">一键选股</button>
     <button class="copy-btn history-btn" onclick="saveCurrentSelection()">保存选股</button>
@@ -1556,7 +1564,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
       <button class="modal-close" id="modalClose">&times;</button>
     </div>
     <div class="score-detail-panel" id="scoreDetailPanel" style="display:none">
-      <div class="score-detail-title">五维共振评分详情</div>
+      <div class="score-detail-title">五维共振评分详情 · 参考分</div>
       <div class="score-detail-grid" style="grid-template-columns:repeat(3,1fr)">
         <div class="score-detail-item">
           <div class="score-detail-label">综合评分</div>
@@ -1805,6 +1813,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         <div style="font-weight:600;margin-bottom:8px">策略说明</div>
         <div style="font-size:13px;color:var(--text-sec);line-height:1.8">
           <p><strong>五维共振选股体系</strong>：基本面25% + 估值面20% + 资金面20% + 技术面25% + 风险面10%</p>
+          <p style="color:#f59e0b"><strong>口径提示</strong>：本页评分为展示层参考分，资金面依赖实时主力净流入（无历史序列），不可回测；页面上的业绩数字对应「可回测五维 V1」（趋势/动量/量价/波动/位置），与该评分不是同一实现。</p>
           <p><strong>买入条件</strong>：综合评分≥75分，五维均≥60分，通过风险排除</p>
           <p><strong>卖出条件</strong>：评分降至60分以下，或触发止损（-5%），或持有超过10个交易日</p>
           <p><strong>回测区间</strong>：2025-09 至 2026-09，覆盖牛熊转换</p>
@@ -3171,7 +3180,7 @@ let trendFilter = null;
 let currentStrategy = 'five_dim'; // five_dim / trend / hybrid
 const STRATEGY_NAMES = { five_dim: '五维共振', trend: '趋势跟踪', hybrid: '混合策略' };
 const STRATEGY_BACKTEST = {
-  five_dim: { return: 20.97, win_rate: 50.83, drawdown: 10.66, trades: 362, desc: '基本面25%+估值面20%+资金面20%+技术面25%+风险面10%，五维综合评分选股' },
+  five_dim: { return: 20.97, win_rate: 50.83, drawdown: 10.66, trades: 362, desc: '业绩口径为可回测五维 V1（趋势25%+动量25%+量价20%+波动15%+位置15%），与当前看板展示的五维参考分不是同一实现' },
   trend: { return: 28.63, win_rate: 43.56, drawdown: 13.24, trades: 101, desc: 'MA10上穿MA30买入，下穿卖出，止损10%，持有30天，趋势跟踪' },
   hybrid: { return: 2.05, win_rate: 44.20, drawdown: 18.25, trades: 371, desc: '五维评分≥60 AND 趋势强度>0，条件过滤混合策略' }
 };
