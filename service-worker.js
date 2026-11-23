@@ -102,7 +102,8 @@ self.addEventListener('fetch', (event) => {
   const isApiRequest = url.pathname.startsWith('/api/') ||
       url.hostname.includes('eastmoney.com') ||
       url.hostname.includes('push2') ||
-      url.hostname.includes('sina');
+      url.hostname.includes('sina') ||
+      url.hostname.includes('gtimg');
   
   if (isApiRequest) {
     event.respondWith(
