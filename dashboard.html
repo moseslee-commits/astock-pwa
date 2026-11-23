@@ -2365,30 +2365,46 @@ function emToTencent(secid) {
   return null;
 }
 
+function emToThs(secid) {
+  // 东财 secid 转同花顺代码：1/0 前缀 → hs_代码；指数另有别名
+  const p = String(secid || '').split('.');
+  if (p.length < 2) return null;
+  if (p[0] === '116') return null;
+  const c = p[1];
+  if (p[0] === '1' && c === '000001') return 'hs_1A0001';
+  if (c === '000300') return 'hs_399300';
+  if (/^\d{6}$/.test(c)) return 'hs_' + c;
+  return null;
+}
+
 async function fetchKline(secid) {
-  // 腾讯日K：东财在 GitHub Pages 环境下被风控（返回空响应），改用腾讯 ifzq
-  const tq = emToTencent(secid);
-  if (!tq) return;
-  const url = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' + tq + ',day,,,80,qfq';
+  // 同花顺日K：返回 JS 变量文件（跨域可读）。东财/腾讯在 github.io 上均被拦。
+  const ths = emToThs(secid);
+  if (!ths) return;
+  const url = 'https://d.10jqka.com.cn/v6/line/' + ths + '/01/last.js';
   try {
     const resp = await fetch(url);
-    const data = await resp.json();
-    const dd = (data && data.data ? data.data[tq] : null) || {};
-    const klines = dd.qfqday || dd.day || [];
-    if (klines.length > 0) {
-      klineCache[secid] = klines.map(k => {
-        const parts = Array.isArray(k) ? k : k.split(',');
+    const txt = await resp.text();
+    const l = txt.indexOf('(');
+    const r = txt.lastIndexOf(')');
+    if (l < 0 || r < 0) return;
+    const j = JSON.parse(txt.slice(l + 1, r));
+    // 每段：日期,开,高,低,收,量,额,换手...
+    const rows = (j.data ? j.data.split(';') : []).slice(-80);
+    if (rows.length > 0) {
+      klineCache[secid] = rows.map(function (row) {
+        const p = row.split(',');
         return {
-          open: parseFloat(parts[1]),
-          close: parseFloat(parts[2]),
-          high: parseFloat(parts[3]),
-          low: parseFloat(parts[4]),
-          volume: parseFloat(parts[5])
+          open: parseFloat(p[1]),
+          high: parseFloat(p[2]),
+          low: parseFloat(p[3]),
+          close: parseFloat(p[4]),
+          volume: parseFloat(p[5])
         };
       });
     }
   } catch (e) {
-    // 失败时保留空缓存，页面会标记为数据缺失而不是静默 30 分
+    // 失败保留空缓存，页面按数据缺失处理
   }
 }
 
