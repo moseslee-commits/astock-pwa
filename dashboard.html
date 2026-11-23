@@ -2355,18 +2355,29 @@ function secidToTencentCode(secid) {
   return null;
 }
 
+function emToTencent(secid) {
+  // 东财 secid（1.600000 / 0.000001 / 116.00700）转腾讯代码（sh/sz/hk）
+  const p = String(secid || '').split('.');
+  if (p.length < 2) return null;
+  if (p[0] === '1') return 'sh' + p[1];
+  if (p[0] === '0') return 'sz' + p[1];
+  if (p[0] === '116') return 'hk' + p[1];
+  return null;
+}
+
 async function fetchKline(secid) {
-  // 直连东财 push2his：原 /api/kline 是本地代理，线上与 APK 内均 404
-  const url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=' + secid +
-    '&klt=101&fqt=1&end=20500101&lmt=80&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57';
+  // 腾讯日K：东财在 GitHub Pages 环境下被风控（返回空响应），改用腾讯 ifzq
+  const tq = emToTencent(secid);
+  if (!tq) return;
+  const url = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' + tq + ',day,,,80,qfq';
   try {
     const resp = await fetch(url);
     const data = await resp.json();
-    const kl = (data && data.data ? data.data : data) || {};
-    const klines = kl.klines || [];
+    const dd = (data && data.data ? data.data[tq] : null) || {};
+    const klines = dd.qfqday || dd.day || [];
     if (klines.length > 0) {
       klineCache[secid] = klines.map(k => {
-        const parts = k.split(',');
+        const parts = Array.isArray(k) ? k : k.split(',');
         return {
           open: parseFloat(parts[1]),
           close: parseFloat(parts[2]),
@@ -2377,22 +2388,22 @@ async function fetchKline(secid) {
       });
     }
   } catch (e) {
-    // Silent fail - klineCache will be empty for this stock
+    // 失败时保留空缓存，页面会标记为数据缺失而不是静默 30 分
   }
 }
 
 async function fetchKlineHK(hkCode, usSecid) {
-  // 港股同样直连东财（116 为港股市场前缀）
-  const url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=116.' + hkCode +
-    '&klt=101&fqt=1&end=20500101&lmt=80&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57';
+  // 腾讯港股日K
+  const tq = 'hk' + hkCode;
+  const url = 'https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?param=' + tq + ',day,,,80,qfq';
   try {
     const resp = await fetch(url);
     const data = await resp.json();
-    const kl = (data && data.data ? data.data : data) || {};
-    const klines = kl.klines || [];
+    const dd = (data && data.data ? data.data[tq] : null) || {};
+    const klines = dd.qfqday || dd.day || [];
     if (klines.length > 0) {
       klineCache[usSecid] = klines.map(k => {
-        const parts = k.split(',');
+        const parts = Array.isArray(k) ? k : k.split(',');
         return {
           open: parseFloat(parts[1]),
           close: parseFloat(parts[2]),
@@ -4885,14 +4896,14 @@ async function loadMinuteChart(stock) {
   infoEl.innerHTML = '<div class="chart-loading">加载分时数据中...</div>';
 
   try {
-    const url = 'https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=' + stock.secid +
-      '&ndays=1&iscr=0&fields1=f1,f2,f3,f4,f5,f6,f7,f8&fields2=f51,f53,f54,f56';
+    const tq = emToTencent(stock.secid);
+    const url = 'https://web.ifzq.gtimg.cn/appstock/app/minute/query?code=' + (tq || '');
     const resp = await fetch(url);
     const data = await resp.json();
-    const trends = (data && data.data ? data.data.trends : null) || [];
-    const points = trends.map(function (t) {
-      const p = t.split(',');
-      return [p[0], p[1], p[3] || '0'];
+    const raw = (tq && data && data.data && data.data[tq] && data.data[tq].data) ? (data.data[tq].data.data || []) : [];
+    const points = raw.map(function (t) {
+      const p = t.split(' ');
+      return [p[0], p[1], p[2] || '0'];
     });
     if (points.length > 0) {
       // Get prev close from kline cache (second-to-last close)
@@ -5087,15 +5098,14 @@ async function loadKlineChart(stock, period) {
   try {
     // 根据周期决定获取多少天数据
     const fetchDays = period === 'month' ? 500 : period === 'week' ? 250 : 120;
-    const resp = await fetch('https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=' + stock.secid +
-      '&klt=101&fqt=1&end=20500101&lmt=' + fetchDays +
-      '&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57');
+    const tq = emToTencent(stock.secid);
+    const resp = await fetch('https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' + tq + ',day,,,' + fetchDays + ',qfq');
     const data = await resp.json();
-    const kl = (data && data.data ? data.data : data) || {};
-    const klines = kl.klines || [];
+    const dd = (data && data.data ? data.data[tq] : null) || {};
+    const klines = dd.qfqday || dd.day || [];
     if (klines.length > 0) {
       let parsed = klines.map(k => {
-        const p = k.split(',');
+        const p = Array.isArray(k) ? k : k.split(',');
         return { date: p[0], open: parseFloat(p[1]), close: parseFloat(p[2]), high: parseFloat(p[3]), low: parseFloat(p[4]), volume: parseFloat(p[5]) };
       });
       // 根据周期聚合
