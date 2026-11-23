@@ -2356,13 +2356,16 @@ function secidToTencentCode(secid) {
 }
 
 async function fetchKline(secid) {
-  // Use local API proxy (Sina Finance data source)
-  const url = '/api/kline?secid=' + secid + '&days=80';
+  // 直连东财 push2his：原 /api/kline 是本地代理，线上与 APK 内均 404
+  const url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=' + secid +
+    '&klt=101&fqt=1&end=20500101&lmt=80&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57';
   try {
     const resp = await fetch(url);
     const data = await resp.json();
-    if (data && data.klines && data.klines.length > 0) {
-      klineCache[secid] = data.klines.map(k => {
+    const kl = (data && data.data ? data.data : data) || {};
+    const klines = kl.klines || [];
+    if (klines.length > 0) {
+      klineCache[secid] = klines.map(k => {
         const parts = k.split(',');
         return {
           open: parseFloat(parts[1]),
@@ -2379,12 +2382,16 @@ async function fetchKline(secid) {
 }
 
 async function fetchKlineHK(hkCode, usSecid) {
-  const url = '/api/kline_hk?code=' + hkCode + '&days=80';
+  // 港股同样直连东财（116 为港股市场前缀）
+  const url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=116.' + hkCode +
+    '&klt=101&fqt=1&end=20500101&lmt=80&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57';
   try {
     const resp = await fetch(url);
     const data = await resp.json();
-    if (data && data.klines && data.klines.length > 0) {
-      klineCache[usSecid] = data.klines.map(k => {
+    const kl = (data && data.data ? data.data : data) || {};
+    const klines = kl.klines || [];
+    if (klines.length > 0) {
+      klineCache[usSecid] = klines.map(k => {
         const parts = k.split(',');
         return {
           open: parseFloat(parts[1]),
@@ -4604,18 +4611,8 @@ async function loadFundamentalData(stock) {
   loading.style.display = 'block';
   content.style.display = 'none';
   
-  try {
-    const resp = await fetch('/api/finance?secid=' + stock.secid);
-    const data = await resp.json();
-    if (data && !data.error) {
-      financeCache[stock.secid] = data;
-      renderFundamental(data);
-    } else {
-      loading.textContent = '财务数据获取失败: ' + (data.error || '未知错误');
-    }
-  } catch (e) {
-    loading.textContent = '财务数据获取失败: ' + e.message;
-  }
+  // 财务明细由 /api/finance 聚合，静态站点无后端；此处显式说明，不再发无效请求
+  loading.textContent = '财务明细未接入：当前为静态站点，不提供财务报表聚合。估值请参考表格中的 PE / PB / PE 分位。';
 }
 
 function renderFundamental(data) {
@@ -4888,10 +4885,16 @@ async function loadMinuteChart(stock) {
   infoEl.innerHTML = '<div class="chart-loading">加载分时数据中...</div>';
 
   try {
-    const resp = await fetch('/api/minute?secid=' + stock.secid);
+    const url = 'https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=' + stock.secid +
+      '&ndays=1&iscr=0&fields1=f1,f2,f3,f4,f5,f6,f7,f8&fields2=f51,f53,f54,f56';
+    const resp = await fetch(url);
     const data = await resp.json();
-    if (data && data.points && data.points.length > 0) {
-      const points = data.points; // [[time, price, vol], ...]
+    const trends = (data && data.data ? data.data.trends : null) || [];
+    const points = trends.map(function (t) {
+      const p = t.split(',');
+      return [p[0], p[1], p[3] || '0'];
+    });
+    if (points.length > 0) {
       // Get prev close from kline cache (second-to-last close)
       let prevClose = 0;
       const kc = klineCache[stock.secid];
@@ -5084,11 +5087,14 @@ async function loadKlineChart(stock, period) {
   try {
     // 根据周期决定获取多少天数据
     const fetchDays = period === 'month' ? 500 : period === 'week' ? 250 : 120;
-    const resp = await fetch('/api/kline?secid=' + stock.secid + '&days=' + fetchDays);
+    const resp = await fetch('https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=' + stock.secid +
+      '&klt=101&fqt=1&end=20500101&lmt=' + fetchDays +
+      '&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57');
     const data = await resp.json();
-    if (data && data.klines && data.klines.length > 0) {
-      // Parse klines: ["date,open,close,high,low,vol,0", ...]
-      let parsed = data.klines.map(k => {
+    const kl = (data && data.data ? data.data : data) || {};
+    const klines = kl.klines || [];
+    if (klines.length > 0) {
+      let parsed = klines.map(k => {
         const p = k.split(',');
         return { date: p[0], open: parseFloat(p[1]), close: parseFloat(p[2]), high: parseFloat(p[3]), low: parseFloat(p[4]), volume: parseFloat(p[5]) };
       });
@@ -6378,24 +6384,11 @@ function checkNewSignals(stocks) {
 // Tunnel status & dashboard QR
 let tunnelData = null;
 async function fetchTunnelStatus() {
-  try {
-    const resp = await fetch('/api/tunnel');
-    tunnelData = await resp.json();
-    const dot = document.getElementById('tunnelDot');
-    const text = document.getElementById('tunnelText');
-    if (tunnelData.enabled) {
-      dot.className = 'tunnel-dot online';
-      text.textContent = '公网可访问';
-    } else {
-      dot.className = 'tunnel-dot offline';
-      text.textContent = '本地模式';
-    }
-  } catch(e) {
-    const dot = document.getElementById('tunnelDot');
-    const text = document.getElementById('tunnelText');
-    if (dot) dot.className = 'tunnel-dot offline';
-    if (text) text.textContent = '本地模式';
-  }
+  // 线上为 GitHub Pages 静态站点、APK 内为离线包，均无隧道概念
+  const dot = document.getElementById('tunnelDot');
+  const text = document.getElementById('tunnelText');
+  if (dot) dot.className = 'tunnel-dot offline';
+  if (text) text.textContent = '静态站点';
 }
 // Init
 fetchTunnelStatus();

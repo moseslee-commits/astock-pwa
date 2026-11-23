@@ -654,28 +654,14 @@ function reloadFrame(pageId) {
 
 // ========== 服务器状态检测 ==========
 function checkServerStatus() {
-  fetch('/api/health')
-    .then(r => r.json())
-    .then(data => {
-      const dot = document.getElementById('serverDot');
-      const status = document.getElementById('serverStatus');
-      if (data.status === 'ok') {
-        dot.classList.remove('error');
-        status.textContent = '运行中';
-        status.style.color = 'var(--down)';
-      } else {
-        dot.classList.add('error');
-        status.textContent = '异常';
-        status.style.color = 'var(--up)';
-      }
-    })
-    .catch(() => {
-      const dot = document.getElementById('serverDot');
-      const status = document.getElementById('serverStatus');
-      dot.classList.add('error');
-      status.textContent = '离线';
-      status.style.color = 'var(--up)';
-    });
+  // 线上为 GitHub Pages 静态部署、APK 为离线包，均无后端健康检查
+  const dot = document.getElementById('serverDot');
+  const status = document.getElementById('serverStatus');
+  if (dot) dot.classList.remove('error');
+  if (status) {
+    status.textContent = '静态部署';
+    status.style.color = 'var(--down)';
+  }
 }
 
 // ========== 时间更新 ==========
