@@ -1,10 +1,10 @@
-// A股智能选股系统 Service Worker v4
-const CACHE_NAME = 'astock-pwa-v4';
-const STATIC_CACHE = 'astock-static-v4';
-const RUNTIME_CACHE = 'astock-runtime-v4';
-const API_CACHE = 'astock-api-v4';
+// A股智能选股系统 Service Worker（版本号由构建脚本同步）
+const CACHE_VERSION = 'v473';
+const CACHE_NAME = 'astock-pwa-' + CACHE_VERSION;
+const STATIC_CACHE = 'astock-static-' + CACHE_VERSION;
+const RUNTIME_CACHE = 'astock-runtime-' + CACHE_VERSION;
+const API_CACHE = 'astock-api-' + CACHE_VERSION;
 
-// 核心静态资源（安装时缓存）
 const CORE_ASSETS = [
   './',
   './manifest.json',
@@ -16,47 +16,35 @@ const CORE_ASSETS = [
   './history.html',
   './app.html',
   './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/icon-1024.png'
+  './icons/icon-512.png'
 ];
 
-// 离线回退页面
 const OFFLINE_PAGE = './mobile.html';
-
-// API缓存最大数量和过期时间（毫秒）
 const API_CACHE_MAX = 50;
-const API_CACHE_TTL = 5 * 60 * 1000; // 5分钟
+const API_CACHE_TTL = 5 * 60 * 1000;
 
-// 安装：缓存核心资源
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE)
-      .then((cache) => {
-        return cache.addAll(CORE_ASSETS).catch(err => {
-          console.log('部分资源缓存失败:', err);
-          return Promise.all(CORE_ASSETS.map(url => 
-            cache.add(url).catch(e => console.log('缓存失败:', url, e))
-          ));
-        });
-      })
+      .then((cache) => cache.addAll(CORE_ASSETS).catch(async () => {
+        await Promise.all(CORE_ASSETS.map(url => cache.add(url).catch(() => null)));
+      }))
       .then(() => self.skipWaiting())
   );
 });
 
-// 激活：清理旧缓存
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => !name.includes('v4'))
+    caches.keys()
+      .then((names) => Promise.all(
+        names
+          .filter((name) => name.startsWith('astock-') && !name.includes(CACHE_VERSION))
           .map((name) => caches.delete(name))
-      );
-    }).then(() => self.clients.claim())
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// 检查缓存是否过期
 function isCacheExpired(response) {
   if (!response) return true;
   const cachedTime = response.headers.get('sw-cache-time');
@@ -64,150 +52,124 @@ function isCacheExpired(response) {
   return (Date.now() - parseInt(cachedTime)) > API_CACHE_TTL;
 }
 
-// 缓存API响应（带时间戳）
+// 只缓存成功的 2xx 响应，避免把 404/501 固化 5 分钟
 async function cacheApiResponse(request, response) {
-  if (!response || response.status !== 200) return;
+  if (!response || !response.ok) return;
   const clone = response.clone();
   const headers = new Headers(clone.headers);
   headers.set('sw-cache-time', Date.now().toString());
-  
   const cachedResponse = new Response(await clone.blob(), {
     status: clone.status,
     statusText: clone.statusText,
     headers: headers
   });
-  
   const cache = await caches.open(API_CACHE);
   await cache.put(request, cachedResponse);
-  
-  // 清理过期缓存，控制缓存数量
   const keys = await cache.keys();
-  if (keys.length > API_CACHE_MAX) {
-    for (let i = 0; i < keys.length - API_CACHE_MAX; i++) {
-      await cache.delete(keys[i]);
-    }
-  }
+  for (let i = 0; i < keys.length - API_CACHE_MAX; i++) await cache.delete(keys[i]);
 }
 
-// 请求拦截：智能缓存策略
+// 离线骨架与调用方期望的 shape 对齐，避免静默跳过
+function offlineFallback(url) {
+  const path = url.pathname.toLowerCase();
+  let payload;
+  if (path.includes('kline') || path.includes('last.js')) payload = { klines: [], count: 0 };
+  else if (path.includes('minute')) payload = { points: [], count: 0 };
+  else if (path.includes('finance')) payload = { pe_dynamic: '-', pb: '-', degraded: true };
+  else payload = { error: 'offline', data: [] };
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'sw-offline': '1' }
+  });
+}
+
+function isApiRequest(url) {
+  const host = url.hostname;
+  return url.pathname.startsWith('/api/') ||
+    host.includes('eastmoney.com') || host.includes('push2') ||
+    host.includes('sina') || host.includes('gtimg') || host.includes('10jqka');
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-
-  // 只缓存GET请求
   if (request.method !== 'GET') return;
-
   const url = new URL(request.url);
 
-  // API请求：网络优先，失败回退缓存（Stale-While-Revalidate）
-  const isApiRequest = url.pathname.startsWith('/api/') ||
-      url.hostname.includes('eastmoney.com') ||
-      url.hostname.includes('push2') ||
-      url.hostname.includes('sina') ||
-      url.hostname.includes('gtimg');
-  
-  if (isApiRequest) {
+  if (isApiRequest(url)) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // 缓存成功的API响应
-          cacheApiResponse(request, response.clone());
+          if (response.ok) cacheApiResponse(request, response.clone());
           return response;
         })
         .catch(async () => {
-          // 网络失败，尝试缓存
           const cached = await caches.match(request);
-          if (cached) {
-            // 返回缓存数据，即使过期也返回（离线时总比没有好）
-            return cached;
-          }
-          // 返回空数据响应
-          return new Response(JSON.stringify({ error: 'offline', data: [] }), {
-            headers: { 'Content-Type': 'application/json' }
-          });
+          if (cached && !isCacheExpired(cached)) return cached;
+          return offlineFallback(url);
         })
     );
     return;
   }
 
-  // HTML页面：网络优先，失败回退缓存
   if (request.mode === 'navigate' || url.pathname.endsWith('.html')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
           if (response && response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
+            const clone = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, clone));
           }
           return response;
         })
-        .catch(() => {
-          return caches.match(request).then((cached) => {
-            return cached || caches.match(OFFLINE_PAGE);
-          });
-        })
+        .catch(() => caches.match(request).then((cached) => cached || caches.match(OFFLINE_PAGE)))
     );
     return;
   }
 
-  // 静态资源（CSS/JS/图片/字体）：缓存优先，网络更新
   event.respondWith(
     caches.match(request).then((cached) => {
       const networkFetch = fetch(request).then((response) => {
         if (response && response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(STATIC_CACHE).then((cache) => {
-            cache.put(request, responseClone);
-          });
+          const clone = response.clone();
+          caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
         }
         return response;
       }).catch(() => cached);
-
       return cached || networkFetch;
     })
   );
 });
 
-// 监听推送消息
 self.addEventListener('push', (event) => {
-  if (event.data) {
-    const data = event.data.json();
-    event.waitUntil(
-      self.registration.showNotification(data.title || '价格预警', {
-        body: data.body || '',
-        icon: './icons/icon-192.png',
-        badge: './icons/icon-192.png',
-        tag: data.tag || 'astock-notification'
-      })
-    );
-  }
+  if (!event.data) return;
+  const data = event.data.json();
+  event.waitUntil(self.registration.showNotification(data.title || '价格预警', {
+    body: data.body || '',
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
+    tag: data.tag || 'astock-notification'
+  }));
 });
 
-// 点击通知聚焦页面
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes('mobile.html') && 'focus' in client) {
-          return client.focus();
-        }
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if (client.url.includes('mobile.html') && 'focus' in client) return client.focus();
       }
-      if (clients.openWindow) {
-        return clients.openWindow('./mobile.html');
-      }
+      if (clients.openWindow) return clients.openWindow('./mobile.html');
     })
   );
 });
 
-// 离线状态检测：通知页面
 self.addEventListener('message', (event) => {
   if (event.data === 'getOfflineStatus') {
     event.source.postMessage({
       type: 'offlineStatus',
       online: self.navigator.onLine,
-      apiCacheSize: API_CACHE_MAX
+      apiCacheSize: API_CACHE_MAX,
+      cacheVersion: CACHE_VERSION
     });
   }
 });

@@ -251,6 +251,39 @@ body {
     <meta name="apple-mobile-web-app-title" content="智能选股">
     <link rel="apple-touch-icon" href="./icons/icon-192.png">
     <link rel="icon" type="image/png" href="./icons/icon-192.png">
+
+<!-- AST_STYLE_START -->
+<style id='ast-mobile-css'>
+/* AST 移动端与可访问性基线 - 构建时内联进各页面 */
+#ast-mobile-css { display: none; }
+
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px !important; }
+  button, a.btn, .tab, [role="button"] { min-height: 44px; min-width: 44px; }
+  .m-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  .m-table-scroll table { min-width: max-content; }
+  #toastContainer { right: 12px; left: 12px; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  .toast { max-width: 100%; word-break: break-word; }
+}
+
+:focus-visible {
+  outline: 2px solid #85b7eb;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+</style>
+<!-- AST_STYLE_END -->
 </head>
 <body>
 <div class="container">
@@ -673,5 +706,178 @@ function appConfirm(title, msg, danger) {
   v4.7.2 · © 2026 Moses 版权所有<br>
   <a href="mailto:moses.lee@outlook.com" style="color:#8b95a7;text-decoration:none">moses.lee@outlook.com</a>
 </div>
+
+<!-- AST_COMMON_START -->
+<script>
+/* AST 公共层 - 单一实现，构建时内联进各页面（保持单文件打开即用） */
+(function (global) {
+  'use strict';
+
+  var PAGES = ['dashboard.html', 'stock-picker.html', 'portfolio.html',
+    'price-alert.html', 'history.html', 'mobile.html',
+    'strategy-comparison.html', 'parameter-sensitivity.html', 'app.html'];
+
+  function NetworkError(message) {
+    this.name = 'NetworkError';
+    this.message = message;
+  }
+  NetworkError.prototype = Object.create(Error.prototype);
+
+  function toastContainer() {
+    var el = document.getElementById('toastContainer');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'toastContainer';
+    el.style.cssText = 'position:fixed;right:16px;bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none';
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function showToast(msg, type) {
+    var container = toastContainer();
+    var toast = document.createElement('div');
+    toast.className = 'toast ' + (type || 'success');
+    toast.textContent = String(msg);
+    toast.style.cssText = 'background:#182231;color:#e6edf6;border:1px solid #2b3a4d;border-radius:6px;padding:9px 14px;font-size:13px;max-width:82vw;box-shadow:none';
+    container.appendChild(toast);
+    setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3000);
+  }
+
+  var wrapBusy = false;
+  function wrapTables() {
+    if (wrapBusy || window.innerWidth > 768) return;
+    wrapBusy = true;
+    try {
+      var tables = document.querySelectorAll('table');
+      for (var i = 0; i < tables.length; i++) {
+        var t = tables[i];
+        if (!t.parentNode || t.parentNode.classList.contains('m-table-scroll')) continue;
+        var w = document.createElement('div');
+        w.className = 'm-table-scroll';
+        w.style.cssText = 'overflow-x:auto;-webkit-overflow-scrolling:touch';
+        t.parentNode.insertBefore(w, t);
+        w.appendChild(t);
+      }
+    } finally {
+      wrapBusy = false;
+    }
+  }
+
+  function get(key, fallback) {
+    try {
+      var raw = global.localStorage.getItem(key);
+      return raw === null ? fallback : JSON.parse(raw);
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function set(key, value) {
+    try {
+      global.localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function fetchJSON(url, options) {
+    options = options || {};
+    var timeout = options.timeout || 8000;
+    var retries = options.retries === undefined ? 1 : options.retries;
+    var attempt = 0;
+    function once() {
+      var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, timeout) : null;
+      var init = Object.assign({}, options.init || {});
+      if (ctrl) init.signal = ctrl.signal;
+      return global.fetch(url, init).then(function (resp) {
+        if (timer) clearTimeout(timer);
+        if (!resp.ok) throw new NetworkError(url + ' HTTP ' + resp.status);
+        return resp.json();
+      }).catch(function (err) {
+        if (timer) clearTimeout(timer);
+        if (attempt++ < retries) return once();
+        throw new NetworkError(url + ' ' + (err && err.message ? err.message : '请求失败'));
+      });
+    }
+    return once();
+  }
+
+  function reportFailure(area, err, fallbackText) {
+    var msg = (area || '数据') + '不可用：' + (err && err.message ? err.message : String(err));
+    showToast(msg, 'error');
+    if (fallbackText) showToast(fallbackText, 'info');
+    return null;
+  }
+
+  function calcTechScore(count) {
+    return Math.min(100, 30 + Math.max(0, Number(count) || 0) * 10);
+  }
+
+  function formatPct(value) {
+    var n = Number(value);
+    if (!isFinite(n)) return '--';
+    return (n > 0 ? '+' : '') + n.toFixed(2) + '%';
+  }
+
+  var memoStore = {};
+  function memo(key, ttl, loader) {
+    var hit = memoStore[key];
+    var now = Date.now();
+    if (hit && now - hit.time < ttl) return Promise.resolve(hit.value);
+    return Promise.resolve().then(loader).then(function (value) {
+      memoStore[key] = { time: Date.now(), value: value };
+      return value;
+    });
+  }
+
+  function clearMemo() { memoStore = {}; }
+
+  function batchRun(items, worker, options) {
+    options = options || {};
+    var size = options.size || 5;
+    var delay = options.delay || 0;
+    var results = [];
+    var index = 0;
+    function next() {
+      if (index >= items.length) return Promise.resolve(results);
+      var batch = items.slice(index, index + size);
+      index += size;
+      return Promise.all(batch.map(function (item, i) {
+        return Promise.resolve().then(function () { return worker(item, i); })
+          .catch(function (e) { return { error: e && e.message ? e.message : String(e) }; });
+      })).then(function (values) {
+        results = results.concat(values);
+        if (options.onProgress) options.onProgress(results.length, items.length);
+        if (delay && index < items.length) {
+          return new Promise(function (resolve) { setTimeout(resolve, delay); });
+        }
+      }).then(next);
+    }
+    return next();
+  }
+
+  global.AST = {
+    pages: PAGES,
+    NetworkError: NetworkError,
+    showToast: showToast,
+    wrapTables: wrapTables,
+    storage: { get: get, set: set },
+    fetchJSON: fetchJSON,
+    reportFailure: reportFailure,
+    calcTechScore: calcTechScore,
+    formatPct: formatPct,
+    memo: memo,
+    clearMemo: clearMemo,
+    batchRun: batchRun
+  };
+
+  global.showToast = showToast;
+  global.wrapTables = wrapTables;
+})(window);
+
+</script>
+<!-- AST_COMMON_END -->
 </body>
 </html>
