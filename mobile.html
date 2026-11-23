@@ -277,7 +277,7 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
             <div class="user-name">投资者</div>
             <div class="user-meta"><span class="sync-dot"></span>数据已同步 · <span id="todayDate"></span></div>
         </div>
-        <div class="header-badge">v4.7.3</div>
+        <div class="header-badge">v4.7.4</div>
     </div>
 </div>
 
@@ -390,7 +390,7 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
 
 在线版本更新
 · 网页版：<a href="https://moseslee-commits.github.io/astock-pwa/dashboard.html" style="color:#818cf8;word-break:break-all">打开在线看板</a>
-· 最新安装包：<a href="https://moseslee-commits.github.io/astock-pwa/astock_v4.7.3.apk" style="color:#818cf8;word-break:break-all">下载 v4.7.3 APK</a>
+· 最新安装包：<a href="https://moseslee-commits.github.io/astock-pwa/astock_v4.7.4.apk" style="color:#818cf8;word-break:break-all">下载 v4.7.3 APK</a>
 
 历史版本见 CHANGELOG.md
 
@@ -440,7 +440,7 @@ moses.lee@outlook.com</div>
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-window.APP_VERSION = '4.7.0';
+window.APP_VERSION = '4.7.4';
 // 日期
 document.getElementById('todayDate').textContent = new Date().toLocaleDateString('zh-CN', {month:'long', day:'numeric', weekday:'short'});
 
@@ -541,7 +541,7 @@ function showToast(msg) {
 
 <!-- Copyright -->
 <div style="text-align:center;font-size:11px;color:#8b95a7;padding:16px 12px calc(104px + env(safe-area-inset-bottom, 0px));line-height:1.7">
-  v4.7.3 · © 2026 Moses 版权所有<br>
+  v4.7.4 · © 2026 Moses 版权所有<br>
   <a href="mailto:moses.lee@outlook.com" style="color:#8b95a7;text-decoration:none">moses.lee@outlook.com</a>
 </div>
 
@@ -659,6 +659,130 @@ function showToast(msg) {
     return (n > 0 ? '+' : '') + n.toFixed(2) + '%';
   }
 
+  function compareVersions(a, b) {
+    function parts(v) {
+      return String(v == null ? '' : v).replace(/^v/i, '').split(/[.\-]/)
+        .map(function (x) { var n = parseInt(x, 10); return isFinite(n) ? n : 0; });
+    }
+    var pa = parts(a), pb = parts(b);
+    var len = Math.max(pa.length, pb.length);
+    for (var i = 0; i < len; i++) {
+      var x = pa[i] || 0, y = pb[i] || 0;
+      if (x > y) return 1;
+      if (x < y) return -1;
+    }
+    return 0;
+  }
+
+  function updateURL() {
+    return 'https://moseslee-commits.github.io/astock-pwa/version.js';
+  }
+
+  function checkUpdate(options) {
+    options = options || {};
+    var local = options.localVersion;
+    if (!local) {
+      var badge = document.querySelector('.header-badge');
+      local = (badge && badge.textContent || '').replace(/^v/i, '').trim();
+    }
+    if (!local && options.useAppVersion && global.APP_VERSION) local = global.APP_VERSION;
+    var url = options.url || updateURL();
+    var script = document.createElement('script');
+    var settled = false;
+    var timer = setTimeout(function () { finish(new Error('版本检查超时')); }, options.timeout || 6000);
+
+    function finish(err) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      var release = global.ASTOCK_RELEASE;
+      if (err) {
+        if (options.onError) options.onError(err);
+        return;
+      }
+      if (!release || !release.version) {
+        if (options.onError) options.onError(new Error('版本清单无效'));
+        return;
+      }
+      if (options.onRelease) options.onRelease(release);
+      if (compareVersions(release.version, local) > 0) {
+        if (options.onUpdate) options.onUpdate(release, local);
+      } else if (options.onCurrent) {
+        options.onCurrent(release, local);
+      }
+    }
+
+    global.ASTOCK_RELEASE = undefined;
+    script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now();
+    script.onload = function () { finish(); };
+    script.onerror = function () { finish(new Error('版本清单加载失败')); };
+    (document.head || document.body).appendChild(script);
+  }
+
+  function showUpdateBanner(release, options) {
+    options = options || {};
+    var id = 'ast-update-banner';
+    var old = document.getElementById(id);
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    var box = document.createElement('div');
+    box.id = id;
+    box.setAttribute('role', 'status');
+    box.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(8px + env(safe-area-inset-top,0px));z-index:100000;background:#1b2740;color:#e6edf6;border:1px solid #3b82f6;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(0,0,0,.35);font-size:13px';
+    var text = document.createElement('div');
+    text.style.cssText = 'flex:1;line-height:1.5';
+    text.textContent = '发现新版本 v' + release.version + (release.notes ? '：' + release.notes : '');
+    var btn = document.createElement('a');
+    btn.textContent = '下载更新';
+    btn.href = release.apk || release.page || updateURL();
+    btn.style.cssText = 'flex:none;background:#3b82f6;color:#fff;border-radius:6px;padding:6px 12px;text-decoration:none;white-space:nowrap';
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = '×';
+    close.setAttribute('aria-label', '关闭更新提示');
+    close.style.cssText = 'flex:none;background:transparent;color:#94a3b8;border:0;font-size:18px;line-height:1;cursor:pointer';
+    close.onclick = function () { if (box.parentNode) box.parentNode.removeChild(box); };
+    box.appendChild(text);
+    box.appendChild(btn);
+    box.appendChild(close);
+    (document.body || document.documentElement).appendChild(box);
+    if (options.onShow) options.onShow(box);
+    return box;
+  }
+
+  function registerServiceWorker(options) {
+    options = options || {};
+    if (typeof navigator === 'undefined' || !navigator.serviceWorker ||
+        /^file:/i.test(location.protocol)) return Promise.resolve(null);
+    var notified = false;
+    var hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (notified || !hadController) return;
+      notified = true;
+      if (options.onUpdate) options.onUpdate();
+    });
+    return navigator.serviceWorker.register(options.script || './service-worker.js',
+      options.scope ? { scope: options.scope } : undefined).catch(function () { return null; });
+  }
+
+  function initUpdateChecks() {
+    var isApp = !!global.ASTOCK_APP;
+    if (isApp) {
+      checkUpdate({
+        localVersion: global.APP_VERSION,
+        useAppVersion: true,
+        onUpdate: function (release) { showUpdateBanner(release); },
+        onError: function () { /* 离线时静默降级，不影响离线使用 */ }
+      });
+    }
+    registerServiceWorker({
+      onUpdate: function () {
+        showToast('发现新版本，点击刷新后生效', 'info');
+        if (global.confirm && confirm('发现新版本，是否立即刷新？')) global.location.reload();
+      }
+    });
+  }
+
   var memoStore = {};
   function memo(key, ttl, loader) {
     var hit = memoStore[key];
@@ -708,11 +832,21 @@ function showToast(msg) {
     formatPct: formatPct,
     memo: memo,
     clearMemo: clearMemo,
-    batchRun: batchRun
+    batchRun: batchRun,
+    compareVersions: compareVersions,
+    checkUpdate: checkUpdate,
+    showUpdateBanner: showUpdateBanner,
+    registerServiceWorker: registerServiceWorker,
+    initUpdateChecks: initUpdateChecks
   };
 
   global.showToast = showToast;
   global.wrapTables = wrapTables;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initUpdateChecks);
+  } else {
+    initUpdateChecks();
+  }
 })(window);
 
 </script>
