@@ -494,13 +494,6 @@ function doClearCache() {
     showToast('✅ 缓存已清除');
 }
 
-function showToast(msg) {
-    const c = document.getElementById('toastContainer');
-    const t = document.createElement('div');
-    t.className = 'toast'; t.textContent = msg;
-    c.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 2200);
-}
 </script>
 
 
@@ -508,23 +501,7 @@ function showToast(msg) {
 /* MOBILE APP UI v3.2 —— 表格横向滚动容器（支持动态渲染，幂等） */
 (function () {
   var busy = false;
-  function wrapTables() {
-    if (busy || window.innerWidth > 768) return;
-    busy = true;
-    try {
-      var tables = document.querySelectorAll('table');
-      for (var i = 0; i < tables.length; i++) {
-        var t = tables[i];
-        if (!t.parentNode) continue;
-        if (t.closest && t.closest('.m-table-scroll')) continue;
-        var w = document.createElement('div');
-        w.className = 'm-table-scroll';
-        t.parentNode.insertBefore(w, t);
-        w.appendChild(t);
-      }
-    } finally { busy = false; }
-  }
-  if (document.readyState === 'loading') {
+    if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', wrapTables);
   } else {
     wrapTables();
