@@ -1,0 +1,3 @@
+# GitHub Actions workflow 需 workflows:write 权限，当前 API token 无此 scope。
+# 定时任务请在 GitHub 网页端 Settings > Actions 手动添加，或赋权后提交。
+.github/
