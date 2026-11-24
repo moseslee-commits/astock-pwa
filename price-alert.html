@@ -981,6 +981,120 @@ function appConfirm(title, msg, danger) {
     return box;
   }
 
+  // 防骚扰记忆：用户点“稍后再说”后，记住该版本，本次安装内不再重复弹窗。
+  var SKIP_KEY = 'astock_update_skipped';
+  function skippedVersion() {
+    try { return global.localStorage && global.localStorage.getItem(SKIP_KEY) || ''; }
+    catch (e) { return ''; }
+  }
+  function rememberSkip(version) {
+    try { if (global.localStorage) global.localStorage.setItem(SKIP_KEY, version); }
+    catch (e) { /* 隐私模式/沙箱下忽略 */ }
+  }
+  function clearSkip() {
+    try { if (global.localStorage) global.localStorage.removeItem(SKIP_KEY); }
+    catch (e) { /* 忽略 */ }
+  }
+
+  // 启动时模态更新弹窗：显示版本号、更新说明、下载按钮。
+  function showUpdateDialog(release, options) {
+    options = options || {};
+    var id = 'ast-update-dialog';
+    var old = document.getElementById(id);
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+
+    var mask = document.createElement('div');
+    mask.id = id;
+    mask.setAttribute('role', 'dialog');
+    mask.setAttribute('aria-modal', 'true');
+    mask.style.cssText = 'position:fixed;inset:0;z-index:200000;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:24px';
+
+    var card = document.createElement('div');
+    card.style.cssText = 'width:100%;max-width:360px;background:#1a1f2e;color:#e0e6ed;border:1px solid #2a3142;border-radius:16px;padding:22px 20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.5)';
+
+    var title = document.createElement('div');
+    title.style.cssText = 'font-size:17px;font-weight:700;margin-bottom:6px';
+    title.textContent = '发现新版本 v' + release.version;
+
+    var sub = document.createElement('div');
+    sub.style.cssText = 'font-size:12px;color:#8b95a7;margin-bottom:12px';
+    sub.textContent = '当前版本 v' + (options.localVersion || currentVersion());
+
+    var notes = document.createElement('div');
+    notes.style.cssText = 'font-size:13px;line-height:1.65;color:#c3cbd8;background:rgba(99,102,241,.1);border-radius:10px;padding:10px 12px;margin-bottom:18px;white-space:pre-wrap';
+    notes.textContent = release.notes || '优化了稳定性与体验，建议更新。';
+
+    var actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:10px';
+
+    var later = document.createElement('button');
+    later.type = 'button';
+    later.textContent = '稍后再说';
+    later.style.cssText = 'flex:1;background:transparent;color:#8b95a7;border:1px solid #2a3142;border-radius:9px;padding:11px;font-size:14px;cursor:pointer';
+    later.onclick = function () {
+      rememberSkip(release.version);
+      if (mask.parentNode) mask.parentNode.removeChild(mask);
+      if (options.onLater) options.onLater();
+    };
+
+    var download = document.createElement('a');
+    download.textContent = '立即下载';
+    download.href = release.apk || release.page || updateURL();
+    download.setAttribute('download', '');
+    download.style.cssText = 'flex:1;text-align:center;background:#6366f1;color:#fff;border-radius:9px;padding:11px;font-size:14px;text-decoration:none;font-weight:600';
+    download.onclick = function () {
+      clearSkip();
+      if (options.onDownload) options.onDownload();
+    };
+
+    actions.appendChild(later);
+    actions.appendChild(download);
+    card.appendChild(title);
+    card.appendChild(sub);
+    card.appendChild(notes);
+    card.appendChild(actions);
+    mask.appendChild(card);
+    mask.onclick = function (e) { if (e.target === mask) later.onclick(); };
+    (document.body || document.documentElement).appendChild(mask);
+    if (options.onShow) options.onShow(mask);
+    return mask;
+  }
+
+  // 统一入口：APK 与 PWA 打开时都检查；发现新版本弹模态框，尊重“稍后”记忆。
+  function maybeCheckUpdate(options) {
+    options = options || {};
+    checkUpdate({
+      localVersion: options.localVersion || global.APP_VERSION,
+      useAppVersion: true,
+      timeout: options.timeout || 8000,
+      onRelease: options.onRelease,
+      onUpdate: function (release, local) {
+        if (skippedVersion() === release.version) return;
+        showUpdateDialog(release, {
+          localVersion: local,
+          onDownload: options.onDownload,
+          onLater: options.onLater
+        });
+      },
+      onError: options.onError || function () {}
+    });
+  }
+
+  // 手动检查：忽略“稍后”记忆，无新版本时给出明确反馈。
+  function checkUpdateNow() {
+    clearSkip();
+    maybeCheckUpdate({
+      localVersion: global.APP_VERSION,
+      onError: function () {
+        if (global.showToast) showToast('检查失败，请确认网络后重试', 'error');
+      },
+      onRelease: function (release) {
+        if (compareVersions(release.version, currentVersion()) <= 0 &&
+            global.showToast) showToast('已是最新版本 v' + release.version, 'success');
+      }
+    });
+  }
+
   function registerServiceWorker(options) {
     options = options || {};
     if (typeof navigator === 'undefined' || !navigator.serviceWorker ||
@@ -1013,19 +1127,15 @@ function appConfirm(title, msg, danger) {
 
   function initUpdateChecks() {
     syncVersionLabels();
-    var isApp = !!global.ASTOCK_APP;
-    if (isApp) {
-      checkUpdate({
-        localVersion: global.APP_VERSION,
-        useAppVersion: true,
-        onUpdate: function (release) { showUpdateBanner(release); },
-        onError: function () { /* 离线时静默降级，不影响离线使用 */ }
-      });
-    }
+    // APK 与 PWA 打开时都检查版本：新版本上传后，用户进入应用即弹下载提示。
+    maybeCheckUpdate({
+      localVersion: global.APP_VERSION,
+      onError: function () { /* 离线时静默降级，不影响离线使用 */ }
+    });
     registerServiceWorker({
       onUpdate: function () {
-        showToast('发现新版本，点击刷新后生效', 'info');
-        if (global.confirm && confirm('发现新版本，是否立即刷新？')) global.location.reload();
+        // 版本弹窗已负责提示下载；这里只提示网页版缓存已更新，避免重复 confirm。
+        showToast('网页版本已更新，刷新后生效', 'info');
       }
     });
   }
@@ -1083,6 +1193,9 @@ function appConfirm(title, msg, danger) {
     compareVersions: compareVersions,
     checkUpdate: checkUpdate,
     showUpdateBanner: showUpdateBanner,
+    showUpdateDialog: showUpdateDialog,
+    maybeCheckUpdate: maybeCheckUpdate,
+    checkUpdateNow: checkUpdateNow,
     registerServiceWorker: registerServiceWorker,
     initUpdateChecks: initUpdateChecks,
     syncVersionLabels: syncVersionLabels,
