@@ -350,7 +350,7 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
             <div class="menu-icon" style="background:rgba(99,102,241,0.15)">🏷️</div>
             <div class="menu-info">
                 <div class="menu-name">版本信息</div>
-                <div class="menu-desc">当前 v4.7.6 · 查看更新记录</div>
+                <div class="menu-desc">当前 <span data-app-version>v4.7.6</span> · 查看更新记录</div>
             </div>
             <div class="menu-arrow">›</div>
         </div>
@@ -358,7 +358,7 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
             <div class="menu-icon" style="background:rgba(99,102,241,0.15)">ℹ️</div>
             <div class="menu-info">
                 <div class="menu-name">关于</div>
-                <div class="menu-desc">版本 v4.7.6 · 五维共振选股</div>
+                <div class="menu-desc">版本 <span data-app-version>v4.7.6</span> · 五维共振选股</div>
             </div>
             <div class="menu-arrow">›</div>
         </div>
@@ -383,10 +383,10 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
 发布日期：2026-11-24
 
 最近更新（v4.7.6）
-· K 线改为构建期快照（baostock 全量 85/85）+ 盘后增量，首屏不再逐只请求
-· 快照在网络可用时优先拉取，离线自动回退缓存，跨日不会读到旧 K 线
-· 修复行情轮询重叠：请求未结束不重复发起，连续 3 次失败冷却 5 分钟
-· 修复表格横向滚动容器丢失（动态表格未包裹）
+· K 线构建期快照（baostock 全量 85/85）+ 增量更新，收盘后定时刷新
+· SW 对 data/ 快照网络优先、离线回退，避免跨日读到旧 K 线
+· 修复行情轮询重叠请求（3 次失败后 5 分钟冷却）
+· 在线版本更新提示、CLI 多标的参数支持
 
 在线版本更新
 · 网页版：<a href="https://moseslee-commits.github.io/astock-pwa/dashboard.html" style="color:#818cf8;word-break:break-all">打开在线看板</a>
@@ -407,7 +407,7 @@ moses.lee@outlook.com</div>
     <div class="sheet">
         <div class="sheet-handle"></div>
         <h3>关于系统</h3>
-        <div class="sheet-body">A股智能选股系统 v4.7.6
+        <div class="sheet-body">A股智能选股系统 <span data-app-version>v4.7.6</span>
 
 五维共振策略 · 75只龙头股
 数据来源：东方财富实时行情
@@ -742,7 +742,23 @@ function doClearCache() {
       options.scope ? { scope: options.scope } : undefined).catch(function () { return null; });
   }
 
+  function currentVersion() {
+    // 本地版本优先：APK 由 gen_assets 注入，PWA 由构建脚本注入。
+    // 线上清单只作兜底，避免把“当前版本”错显示成可升级的最新版。
+    return global.APP_VERSION || (global.ASTOCK_RELEASE && global.ASTOCK_RELEASE.version) || '';
+  }
+
+  // 单一真相源：把所有 [data-app-version] 元素填充为当前版本，
+  // 避免页面内硬编码版本与 VERSION 不一致（旧版本残留在“关于”弹层）。
+  function syncVersionLabels() {
+    var v = currentVersion();
+    if (!v) return;
+    var nodes = document.querySelectorAll('[data-app-version]');
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = 'v' + v;
+  }
+
   function initUpdateChecks() {
+    syncVersionLabels();
     var isApp = !!global.ASTOCK_APP;
     if (isApp) {
       checkUpdate({
@@ -814,7 +830,9 @@ function doClearCache() {
     checkUpdate: checkUpdate,
     showUpdateBanner: showUpdateBanner,
     registerServiceWorker: registerServiceWorker,
-    initUpdateChecks: initUpdateChecks
+    initUpdateChecks: initUpdateChecks,
+    syncVersionLabels: syncVersionLabels,
+    currentVersion: currentVersion
   };
 
   global.showToast = showToast;

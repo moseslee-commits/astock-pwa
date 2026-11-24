@@ -903,7 +903,23 @@ function appConfirm(title, msg, danger) {
       options.scope ? { scope: options.scope } : undefined).catch(function () { return null; });
   }
 
+  function currentVersion() {
+    // 本地版本优先：APK 由 gen_assets 注入，PWA 由构建脚本注入。
+    // 线上清单只作兜底，避免把“当前版本”错显示成可升级的最新版。
+    return global.APP_VERSION || (global.ASTOCK_RELEASE && global.ASTOCK_RELEASE.version) || '';
+  }
+
+  // 单一真相源：把所有 [data-app-version] 元素填充为当前版本，
+  // 避免页面内硬编码版本与 VERSION 不一致（旧版本残留在“关于”弹层）。
+  function syncVersionLabels() {
+    var v = currentVersion();
+    if (!v) return;
+    var nodes = document.querySelectorAll('[data-app-version]');
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = 'v' + v;
+  }
+
   function initUpdateChecks() {
+    syncVersionLabels();
     var isApp = !!global.ASTOCK_APP;
     if (isApp) {
       checkUpdate({
@@ -975,7 +991,9 @@ function appConfirm(title, msg, danger) {
     checkUpdate: checkUpdate,
     showUpdateBanner: showUpdateBanner,
     registerServiceWorker: registerServiceWorker,
-    initUpdateChecks: initUpdateChecks
+    initUpdateChecks: initUpdateChecks,
+    syncVersionLabels: syncVersionLabels,
+    currentVersion: currentVersion
   };
 
   global.showToast = showToast;
