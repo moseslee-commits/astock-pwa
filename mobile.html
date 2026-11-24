@@ -277,7 +277,7 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
             <div class="user-name">投资者</div>
             <div class="user-meta"><span class="sync-dot"></span>数据已同步 · <span id="todayDate"></span></div>
         </div>
-        <div class="header-badge">v4.7.6</div>
+        <div class="header-badge">v4.7.7</div>
     </div>
 </div>
 
@@ -297,9 +297,17 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
 </div>
 
 <div class="section">
-    <div class="section-title">投资工具</div>
-    <div class="menu-list">
-        <a class="menu-item" href="./price-alert.html">
+<div class="section-title">投资工具</div>
+<div class="menu-list">
+<a class="menu-item" href="./quote.html">
+<div class="menu-icon" style="background:rgba(99,102,241,0.15)">📈</div>
+<div class="menu-info">
+<div class="menu-name">实时行情查询</div>
+<div class="menu-desc">A股 / 港股 / 美股 · 搜索与自选</div>
+</div>
+<div class="menu-arrow">›</div>
+</a>
+<a class="menu-item" href="./price-alert.html">
             <div class="menu-icon" style="background:rgba(255,77,79,0.15)">🔔</div>
             <div class="menu-info">
                 <div class="menu-name">价格预警</div>
@@ -350,7 +358,7 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
             <div class="menu-icon" style="background:rgba(99,102,241,0.15)">🏷️</div>
             <div class="menu-info">
                 <div class="menu-name">版本信息</div>
-                <div class="menu-desc">当前 <span data-app-version>v4.7.6</span> · 查看更新记录</div>
+                <div class="menu-desc">当前 <span data-app-version>v4.7.7</span> · 查看更新记录</div>
             </div>
             <div class="menu-arrow">›</div>
         </div>
@@ -358,7 +366,7 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
             <div class="menu-icon" style="background:rgba(99,102,241,0.15)">ℹ️</div>
             <div class="menu-info">
                 <div class="menu-name">关于</div>
-                <div class="menu-desc">版本 <span data-app-version>v4.7.6</span> · 五维共振选股</div>
+                <div class="menu-desc">版本 <span data-app-version>v4.7.7</span> · 五维共振选股</div>
             </div>
             <div class="menu-arrow">›</div>
         </div>
@@ -369,6 +377,7 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
 <div class="bottom-nav">
   <a class="nav-item" href="./dashboard.html"><span class="icon">📊</span><span class="label">看板</span></a>
   <a class="nav-item" href="./stock-picker.html"><span class="icon">🎯</span><span class="label">选股</span></a>
+  <a class="nav-item" href="./quote.html"><span class="icon">📈</span><span class="label">行情</span></a>
   <a class="nav-item" href="./portfolio.html"><span class="icon">💼</span><span class="label">持仓</span></a>
   <a class="nav-item" href="./price-alert.html"><span class="icon">🔔</span><span class="label">预警</span></a>
   <a class="nav-item active" href="./mobile.html"><span class="icon">👤</span><span class="label">我的</span></a>
@@ -379,10 +388,10 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
     <div class="sheet">
         <div class="sheet-handle"></div>
         <h3>版本信息</h3>
-        <div class="sheet-body" style="text-align:left">当前版本：v4.7.6
+        <div class="sheet-body" style="text-align:left">当前版本：v4.7.7
 发布日期：2026-11-24
 
-最近更新（v4.7.6）
+最近更新（v4.7.7）
 · K 线构建期快照（baostock 全量 85/85）+ 增量更新，收盘后定时刷新
 · SW 对 data/ 快照网络优先、离线回退，避免跨日读到旧 K 线
 · 修复行情轮询重叠请求（3 次失败后 5 分钟冷却）
@@ -390,7 +399,7 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
 
 在线版本更新
 · 网页版：<a href="https://moseslee-commits.github.io/astock-pwa/dashboard.html" style="color:#818cf8;word-break:break-all">打开在线看板</a>
-· 最新安装包：<a href="https://moseslee-commits.github.io/astock-pwa/astock_v4.7.6.apk" style="color:#818cf8;word-break:break-all">下载 v4.7.6 APK</a>
+· 最新安装包：<a href="https://moseslee-commits.github.io/astock-pwa/astock_v4.7.7.apk" style="color:#818cf8;word-break:break-all">下载 v4.7.7 APK</a>
 
 历史版本见 CHANGELOG.md
 
@@ -408,7 +417,7 @@ moses.lee@outlook.com</div>
     <div class="sheet">
         <div class="sheet-handle"></div>
         <h3>关于系统</h3>
-        <div class="sheet-body">A股智能选股系统 <span data-app-version>v4.7.6</span>
+        <div class="sheet-body">A股智能选股系统 <span data-app-version>v4.7.7</span>
 
 五维共振策略 · 75只龙头股
 数据来源：东方财富实时行情
@@ -441,7 +450,7 @@ moses.lee@outlook.com</div>
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-window.APP_VERSION = '4.7.6';
+window.APP_VERSION = '4.7.7';
 // 日期
 document.getElementById('todayDate').textContent = new Date().toLocaleDateString('zh-CN', {month:'long', day:'numeric', weekday:'short'});
 
@@ -519,7 +528,7 @@ function doClearCache() {
 
 <!-- Copyright -->
 <div style="text-align:center;font-size:11px;color:#8b95a7;padding:16px 12px calc(104px + env(safe-area-inset-bottom, 0px));line-height:1.7">
-  v4.7.6 · © 2026 Moses 版权所有<br>
+  v4.7.7 · © 2026 Moses 版权所有<br>
   <a href="mailto:moses.lee@outlook.com" style="color:#8b95a7;text-decoration:none">moses.lee@outlook.com</a>
 </div>
 
@@ -530,7 +539,7 @@ function doClearCache() {
   'use strict';
 
   var PAGES = ['dashboard.html', 'stock-picker.html', 'portfolio.html',
-    'price-alert.html', 'history.html', 'mobile.html',
+    'price-alert.html', 'history.html', 'mobile.html', 'quote.html',
     'strategy-comparison.html', 'parameter-sensitivity.html', 'app.html'];
 
   function NetworkError(message) {
@@ -924,8 +933,226 @@ function doClearCache() {
     return next();
   }
 
+  /* ---------- 全市场行情：本地 API 优先，GitHub Pages 用跨域脚本兜底 ---------- */
+  var jsonpSeq = 0;
+  function loadScript(url, charset, key, timeout) {
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      var settled = false;
+      var timer = setTimeout(function () { finish(new Error('script timeout')); }, timeout || 8000);
+      function finish(err) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (script.parentNode) script.parentNode.removeChild(script);
+        if (err) { reject(err); return; }
+        // 不在这里清理变量：同一个脚本可能定义多个 v_xxx，由调用方读取后统一删除。
+        var value = key ? global[key] : undefined;
+        resolve(value);
+      }
+      script.src = url;
+      if (charset) script.charset = charset;
+      script.onload = function () { finish(); };
+      script.onerror = function () { finish(new Error('script load failed')); };
+      (document.head || document.body).appendChild(script);
+    });
+  }
+
+  function normalizeSymbol(raw) {
+    var value = String(raw == null ? '' : raw).trim().toUpperCase();
+    if (!value) return null;
+    if (value.indexOf('HS_') === 0) {
+      var c = value.slice(3);
+      value = (/^[695]/.test(c) ? '1.' : '0.') + c;
+    }
+    var m;
+    if ((m = /^(\d{1,3})\.([A-Z0-9]{1,10})$/.exec(value))) {
+      var no = m[1], code = m[2];
+      if (no === '1' || no === '0') {
+        return { symbol: (no === '1' ? 'sh' : 'sz') + code, code: code,
+                 secid: no + '.' + code, market: 'CN', tencent: (no === '1' ? 'sh' : 'sz') + code };
+      }
+      if (no === '116') {
+        return { symbol: 'hk' + code, code: code, secid: no + '.' + code,
+                 market: 'HK', tencent: 'hk' + code };
+      }
+      if (no === '105' || no === '106' || no === '107' || no === '100') {
+        return { symbol: 'us' + code, code: code, secid: no + '.' + code,
+                 market: 'US', tencent: 'us' + code };
+      }
+      return null;
+    }
+    if ((m = /^(SH|SZ|BJ|HK|US)([A-Z0-9]{1,10})$/.exec(value))) {
+      var p = m[1], v = m[2];
+      if (p === 'SH' || p === 'SZ' || p === 'BJ') {
+        var mk = /^[695]/.test(v) ? '1' : '0';
+        return { symbol: p.toLowerCase() + v, code: v, secid: mk + '.' + v,
+                 market: 'CN', tencent: p.toLowerCase() + v };
+      }
+      if (p === 'HK') {
+        return { symbol: 'hk' + v, code: v, secid: '116.' + v, market: 'HK', tencent: 'hk' + v };
+      }
+      return { symbol: 'us' + v, code: v, secid: '105.' + v, market: 'US', tencent: 'us' + v };
+    }
+    if (/^\d{6}$/.test(value)) {
+      var m6 = /^[695]/.test(value) ? '1' : '0';
+      return { symbol: (m6 === '1' ? 'sh' : 'sz') + value, code: value,
+               secid: m6 + '.' + value, market: 'CN', tencent: (m6 === '1' ? 'sh' : 'sz') + value };
+    }
+    if (/^\d{5}$/.test(value)) {
+      return { symbol: 'hk' + value, code: value, secid: '116.' + value,
+               market: 'HK', tencent: 'hk' + value };
+    }
+    if (/^[A-Z][A-Z0-9.\-]{0,9}$/.test(value)) {
+      var idx = { NDX: '100.NDX', IXIC: '100.NDX', DJI: '100.DJIA', DJIA: '100.DJIA',
+                  SPX: '100.SPX', INX: '100.SPX', VIX: '100.VIX' }[value] || ('105.' + value);
+      return { symbol: 'us' + value, code: value, secid: idx, market: 'US', tencent: 'us' + value };
+    }
+    return null;
+  }
+
+  function apiBase() {
+    return location.protocol === 'file:' ? '' : '';
+  }
+
+  function localApiAvailable() {
+    return memo('ast_api_probe', 60000, function () {
+      if (location.protocol === 'file:') return Promise.resolve(false);
+      return fetchJSON(apiBase() + '/api/health', { timeout: 1500, retries: 0 })
+        .then(function (d) { return !!(d && d.status === 'ok'); })
+        .catch(function () { return false; });
+    });
+  }
+
+  function num(value) {
+    var n = parseFloat(value);
+    return isFinite(n) ? n : 0;
+  }
+
+  function parseTencentQuote(raw, target) {
+    var f = String(raw || '').split('~');
+    if (f.length < 35) return null;
+    var amount = num(f[37]);
+    if (target.market === 'CN') amount *= 10000;
+    var price = num(f[3]);
+    if (!price) return null;
+    return {
+      symbol: target.symbol, code: target.code, name: f[1] || '', secid: target.secid,
+      market: target.market, price: price, prev_close: num(f[4]), open: num(f[5]),
+      volume: num(f[36]), amount: amount, change: num(f[31]), change_pct: num(f[32]),
+      high: num(f[33]), low: num(f[34]), turnover: num(f[38]), pe: num(f[39]), pb: 0,
+      total_mv: num(f[45]) * 1e8, time: f[30] || '', timestamp: 0,
+      source: 'tencent', stale: false
+    };
+  }
+
+  function fetchQuotes(symbols, options) {
+    options = options || {};
+    var list = (Array.isArray(symbols) ? symbols : [symbols]).map(normalizeSymbol).filter(Boolean);
+    if (!list.length) return Promise.resolve([]);
+    return localApiAvailable().then(function (available) {
+      if (available && !options.skipApi) {
+        return fetchJSON(apiBase() + '/api/quote?symbols=' +
+          encodeURIComponent(list.map(function (t) { return t.symbol; }).join(',')),
+          { timeout: 5000, retries: 0 }).then(function (d) {
+            if (d && Array.isArray(d.quotes) && d.quotes.length) return d.quotes;
+            throw new Error('empty quotes');
+          }).catch(function () { return fetchQuotesScript(list); });
+      }
+      return fetchQuotesScript(list);
+    });
+  }
+
+  function fetchQuotesScript(targets) {
+    var out = [];
+    var batches = [];
+    for (var i = 0; i < targets.length; i += 60) batches.push(targets.slice(i, i + 60));
+    return batches.reduce(function (chain, batch) {
+      return chain.then(function (acc) {
+        var keys = batch.map(function (t) { return 'v_' + t.tencent; });
+        var url = 'https://qt.gtimg.cn/q=' + batch.map(function (t) { return t.tencent; }).join(',');
+        return loadScript(url, 'GBK', keys[0], 8000).then(function () {
+          batch.forEach(function (t, i) {
+            var raw = global[keys[i]];
+            var q = raw ? parseTencentQuote(raw, t) : null;
+            if (q) acc.push(q);
+            try { delete global[keys[i]]; } catch (e) { global[keys[i]] = undefined; }
+          });
+          return acc;
+        }).catch(function () { return acc; });
+      });
+    }, Promise.resolve(out));
+  }
+
+  function searchSymbols(keyword, limit) {
+    var q = String(keyword || '').trim();
+    if (!q) return Promise.resolve([]);
+    limit = limit || 8;
+    return localApiAvailable().then(function (available) {
+      if (available) {
+        return fetchJSON(apiBase() + '/api/search?q=' + encodeURIComponent(q) +
+          '&limit=' + limit, { timeout: 4000, retries: 0 })
+          .then(function (d) { return (d && d.results) || []; })
+          .catch(function () { return searchSymbolsScript(q, limit); });
+      }
+      return searchSymbolsScript(q, limit);
+    });
+  }
+
+  function searchSymbolsScript(keyword, limit) {
+    return loadScript('https://smartbox.gtimg.cn/s3/?q=' + encodeURIComponent(keyword) +
+      '&t=all', 'GBK', 'v_hint', 6000).then(function (hint) {
+        var results = [];
+        String(hint || '').split('^').forEach(function (part) {
+          var f = part.split('~');
+          if (f.length < 3) return;
+          var p = f[0], code = f[1], name = f[2];
+          var symbol = '';
+          if (p === 'sh' || p === 'sz') symbol = p + code;
+          else if (p === 'hk') symbol = 'hk' + code;
+          else if (p === 'us') symbol = 'us' + code.split('.')[0];
+          if (!symbol) return;
+          var t = normalizeSymbol(symbol);
+          results.push({ symbol: symbol, code: code, name: name,
+                         market: t ? t.market : 'US', secid: t ? t.secid : '' });
+        });
+        return results.slice(0, limit);
+      }).catch(function () { return []; });
+  }
+
+  function getKline(symbol, days, options) {
+    options = options || {};
+    var t = normalizeSymbol(symbol);
+    if (!t) return Promise.resolve([]);
+    days = days || 80;
+    return localApiAvailable().then(function (available) {
+      if (available && !options.skipApi) {
+        return fetchJSON(apiBase() + '/api/kline?secid=' + encodeURIComponent(t.secid) +
+          '&days=' + days, { timeout: 6000, retries: 0 })
+          .then(function (d) { return (d && d.klines) || []; })
+          .catch(function () { return getKlineJsonp(t, days); });
+      }
+      return getKlineJsonp(t, days);
+    });
+  }
+
+  function getKlineJsonp(target, days) {
+    var cb = 'ast_kline_' + (++jsonpSeq) + '_' + Date.now();
+    var url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?cb=' + cb +
+      '&secid=' + encodeURIComponent(target.secid) +
+      '&klt=101&fqt=1&end=20500101&lmt=' + days +
+      '&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57';
+    return loadScript(url, 'utf-8', cb, 9000).then(function (payload) {
+      return ((payload && payload.data && payload.data.klines) || []);
+    }).catch(function () { return []; });
+  }
+
   global.AST = {
     pages: PAGES,
+    normalizeSymbol: normalizeSymbol,
+    fetchQuotes: fetchQuotes,
+    searchSymbols: searchSymbols,
+    getKline: getKline,
     NetworkError: NetworkError,
     showToast: showToast,
     wrapTables: wrapTables,

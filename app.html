@@ -396,6 +396,9 @@
       <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard', this)">
         <span class="nav-icon">📊</span>实时看板
       </div>
+      <div class="nav-item" data-page="quote" onclick="switchPage('quote', this)">
+        <span class="nav-icon">📈</span>行情查询
+      </div>
       <div class="nav-item" data-page="screener" onclick="switchPage('screener', this)">
         <span class="nav-icon">🔍</span>智能选股
         <span class="nav-badge">81</span>
@@ -450,7 +453,16 @@
         <div class="frame-error-text">页面加载失败</div>
         <button class="frame-error-btn" onclick="reloadFrame('dashboard')">重新加载</button>
       </div>
-      <iframe class="content-frame" id="frame-dashboard" src="A股实时看板.html" onload="onFrameLoad('dashboard')" onerror="onFrameError('dashboard')"></iframe>
+      <iframe class="content-frame" id="frame-dashboard" src="dashboard.html" onload="onFrameLoad('dashboard')" onerror="onFrameError('dashboard')"></iframe>
+    </div>
+
+    <!-- 行情查询 -->
+    <div class="page" id="page-quote">
+      <div class="frame-loading" id="loading-quote">
+        <div class="splash-loader"></div>
+        <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载实时行情...</div>
+      </div>
+      <iframe class="content-frame" id="frame-quote" src="quote.html" onload="onFrameLoad('quote')"></iframe>
     </div>
 
     <!-- 智能选股 -->
@@ -459,7 +471,7 @@
         <div class="splash-loader"></div>
         <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载...</div>
       </div>
-      <iframe class="content-frame" id="frame-screener" src="智能选股器.html" onload="onFrameLoad('screener')"></iframe>
+      <iframe class="content-frame" id="frame-screener" src="stock-picker.html" onload="onFrameLoad('screener')"></iframe>
     </div>
 
     <!-- 策略回测 -->
@@ -468,7 +480,7 @@
         <div class="splash-loader"></div>
         <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载回测报告...</div>
       </div>
-      <iframe class="content-frame" id="frame-backtest" src="策略回测报告_20260906.html" onload="onFrameLoad('backtest')"></iframe>
+      <iframe class="content-frame" id="frame-backtest" src="strategy-comparison.html" onload="onFrameLoad('backtest')"></iframe>
     </div>
 
     <!-- 持仓管理 -->
@@ -477,7 +489,7 @@
         <div class="splash-loader"></div>
         <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载...</div>
       </div>
-      <iframe class="content-frame" id="frame-portfolio" src="持仓管理.html" onload="onFrameLoad('portfolio')"></iframe>
+      <iframe class="content-frame" id="frame-portfolio" src="portfolio.html" onload="onFrameLoad('portfolio')"></iframe>
     </div>
 
     <!-- 选股历史 -->
@@ -486,7 +498,7 @@
         <div class="splash-loader"></div>
         <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载...</div>
       </div>
-      <iframe class="content-frame" id="frame-history" src="选股历史回顾.html" onload="onFrameLoad('history')"></iframe>
+      <iframe class="content-frame" id="frame-history" src="history.html" onload="onFrameLoad('history')"></iframe>
     </div>
 
     <!-- 价格预警 -->
@@ -495,7 +507,7 @@
         <div class="splash-loader"></div>
         <div style="margin-top:12px;font-size:13px;color:var(--text-sec)">正在加载...</div>
       </div>
-      <iframe class="content-frame" id="frame-alert" src="价格预警.html" onload="onFrameLoad('alert')"></iframe>
+      <iframe class="content-frame" id="frame-alert" src="price-alert.html" onload="onFrameLoad('alert')"></iframe>
     </div>
 
     <!-- 设置 -->
@@ -852,7 +864,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <!-- Copyright -->
 <div style="text-align:center;font-size:11px;color:#8b95a7;padding:16px 12px 20px;line-height:1.7">
-  v4.7.6 · © 2026 Moses 版权所有<br>
+  v4.7.7 · © 2026 Moses 版权所有<br>
   <a href="mailto:moses.lee@outlook.com" style="color:#8b95a7;text-decoration:none">moses.lee@outlook.com</a>
 </div>
 
@@ -863,7 +875,7 @@ document.addEventListener('DOMContentLoaded', function() {
   'use strict';
 
   var PAGES = ['dashboard.html', 'stock-picker.html', 'portfolio.html',
-    'price-alert.html', 'history.html', 'mobile.html',
+    'price-alert.html', 'history.html', 'mobile.html', 'quote.html',
     'strategy-comparison.html', 'parameter-sensitivity.html', 'app.html'];
 
   function NetworkError(message) {
@@ -1257,8 +1269,226 @@ document.addEventListener('DOMContentLoaded', function() {
     return next();
   }
 
+  /* ---------- 全市场行情：本地 API 优先，GitHub Pages 用跨域脚本兜底 ---------- */
+  var jsonpSeq = 0;
+  function loadScript(url, charset, key, timeout) {
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      var settled = false;
+      var timer = setTimeout(function () { finish(new Error('script timeout')); }, timeout || 8000);
+      function finish(err) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (script.parentNode) script.parentNode.removeChild(script);
+        if (err) { reject(err); return; }
+        // 不在这里清理变量：同一个脚本可能定义多个 v_xxx，由调用方读取后统一删除。
+        var value = key ? global[key] : undefined;
+        resolve(value);
+      }
+      script.src = url;
+      if (charset) script.charset = charset;
+      script.onload = function () { finish(); };
+      script.onerror = function () { finish(new Error('script load failed')); };
+      (document.head || document.body).appendChild(script);
+    });
+  }
+
+  function normalizeSymbol(raw) {
+    var value = String(raw == null ? '' : raw).trim().toUpperCase();
+    if (!value) return null;
+    if (value.indexOf('HS_') === 0) {
+      var c = value.slice(3);
+      value = (/^[695]/.test(c) ? '1.' : '0.') + c;
+    }
+    var m;
+    if ((m = /^(\d{1,3})\.([A-Z0-9]{1,10})$/.exec(value))) {
+      var no = m[1], code = m[2];
+      if (no === '1' || no === '0') {
+        return { symbol: (no === '1' ? 'sh' : 'sz') + code, code: code,
+                 secid: no + '.' + code, market: 'CN', tencent: (no === '1' ? 'sh' : 'sz') + code };
+      }
+      if (no === '116') {
+        return { symbol: 'hk' + code, code: code, secid: no + '.' + code,
+                 market: 'HK', tencent: 'hk' + code };
+      }
+      if (no === '105' || no === '106' || no === '107' || no === '100') {
+        return { symbol: 'us' + code, code: code, secid: no + '.' + code,
+                 market: 'US', tencent: 'us' + code };
+      }
+      return null;
+    }
+    if ((m = /^(SH|SZ|BJ|HK|US)([A-Z0-9]{1,10})$/.exec(value))) {
+      var p = m[1], v = m[2];
+      if (p === 'SH' || p === 'SZ' || p === 'BJ') {
+        var mk = /^[695]/.test(v) ? '1' : '0';
+        return { symbol: p.toLowerCase() + v, code: v, secid: mk + '.' + v,
+                 market: 'CN', tencent: p.toLowerCase() + v };
+      }
+      if (p === 'HK') {
+        return { symbol: 'hk' + v, code: v, secid: '116.' + v, market: 'HK', tencent: 'hk' + v };
+      }
+      return { symbol: 'us' + v, code: v, secid: '105.' + v, market: 'US', tencent: 'us' + v };
+    }
+    if (/^\d{6}$/.test(value)) {
+      var m6 = /^[695]/.test(value) ? '1' : '0';
+      return { symbol: (m6 === '1' ? 'sh' : 'sz') + value, code: value,
+               secid: m6 + '.' + value, market: 'CN', tencent: (m6 === '1' ? 'sh' : 'sz') + value };
+    }
+    if (/^\d{5}$/.test(value)) {
+      return { symbol: 'hk' + value, code: value, secid: '116.' + value,
+               market: 'HK', tencent: 'hk' + value };
+    }
+    if (/^[A-Z][A-Z0-9.\-]{0,9}$/.test(value)) {
+      var idx = { NDX: '100.NDX', IXIC: '100.NDX', DJI: '100.DJIA', DJIA: '100.DJIA',
+                  SPX: '100.SPX', INX: '100.SPX', VIX: '100.VIX' }[value] || ('105.' + value);
+      return { symbol: 'us' + value, code: value, secid: idx, market: 'US', tencent: 'us' + value };
+    }
+    return null;
+  }
+
+  function apiBase() {
+    return location.protocol === 'file:' ? '' : '';
+  }
+
+  function localApiAvailable() {
+    return memo('ast_api_probe', 60000, function () {
+      if (location.protocol === 'file:') return Promise.resolve(false);
+      return fetchJSON(apiBase() + '/api/health', { timeout: 1500, retries: 0 })
+        .then(function (d) { return !!(d && d.status === 'ok'); })
+        .catch(function () { return false; });
+    });
+  }
+
+  function num(value) {
+    var n = parseFloat(value);
+    return isFinite(n) ? n : 0;
+  }
+
+  function parseTencentQuote(raw, target) {
+    var f = String(raw || '').split('~');
+    if (f.length < 35) return null;
+    var amount = num(f[37]);
+    if (target.market === 'CN') amount *= 10000;
+    var price = num(f[3]);
+    if (!price) return null;
+    return {
+      symbol: target.symbol, code: target.code, name: f[1] || '', secid: target.secid,
+      market: target.market, price: price, prev_close: num(f[4]), open: num(f[5]),
+      volume: num(f[36]), amount: amount, change: num(f[31]), change_pct: num(f[32]),
+      high: num(f[33]), low: num(f[34]), turnover: num(f[38]), pe: num(f[39]), pb: 0,
+      total_mv: num(f[45]) * 1e8, time: f[30] || '', timestamp: 0,
+      source: 'tencent', stale: false
+    };
+  }
+
+  function fetchQuotes(symbols, options) {
+    options = options || {};
+    var list = (Array.isArray(symbols) ? symbols : [symbols]).map(normalizeSymbol).filter(Boolean);
+    if (!list.length) return Promise.resolve([]);
+    return localApiAvailable().then(function (available) {
+      if (available && !options.skipApi) {
+        return fetchJSON(apiBase() + '/api/quote?symbols=' +
+          encodeURIComponent(list.map(function (t) { return t.symbol; }).join(',')),
+          { timeout: 5000, retries: 0 }).then(function (d) {
+            if (d && Array.isArray(d.quotes) && d.quotes.length) return d.quotes;
+            throw new Error('empty quotes');
+          }).catch(function () { return fetchQuotesScript(list); });
+      }
+      return fetchQuotesScript(list);
+    });
+  }
+
+  function fetchQuotesScript(targets) {
+    var out = [];
+    var batches = [];
+    for (var i = 0; i < targets.length; i += 60) batches.push(targets.slice(i, i + 60));
+    return batches.reduce(function (chain, batch) {
+      return chain.then(function (acc) {
+        var keys = batch.map(function (t) { return 'v_' + t.tencent; });
+        var url = 'https://qt.gtimg.cn/q=' + batch.map(function (t) { return t.tencent; }).join(',');
+        return loadScript(url, 'GBK', keys[0], 8000).then(function () {
+          batch.forEach(function (t, i) {
+            var raw = global[keys[i]];
+            var q = raw ? parseTencentQuote(raw, t) : null;
+            if (q) acc.push(q);
+            try { delete global[keys[i]]; } catch (e) { global[keys[i]] = undefined; }
+          });
+          return acc;
+        }).catch(function () { return acc; });
+      });
+    }, Promise.resolve(out));
+  }
+
+  function searchSymbols(keyword, limit) {
+    var q = String(keyword || '').trim();
+    if (!q) return Promise.resolve([]);
+    limit = limit || 8;
+    return localApiAvailable().then(function (available) {
+      if (available) {
+        return fetchJSON(apiBase() + '/api/search?q=' + encodeURIComponent(q) +
+          '&limit=' + limit, { timeout: 4000, retries: 0 })
+          .then(function (d) { return (d && d.results) || []; })
+          .catch(function () { return searchSymbolsScript(q, limit); });
+      }
+      return searchSymbolsScript(q, limit);
+    });
+  }
+
+  function searchSymbolsScript(keyword, limit) {
+    return loadScript('https://smartbox.gtimg.cn/s3/?q=' + encodeURIComponent(keyword) +
+      '&t=all', 'GBK', 'v_hint', 6000).then(function (hint) {
+        var results = [];
+        String(hint || '').split('^').forEach(function (part) {
+          var f = part.split('~');
+          if (f.length < 3) return;
+          var p = f[0], code = f[1], name = f[2];
+          var symbol = '';
+          if (p === 'sh' || p === 'sz') symbol = p + code;
+          else if (p === 'hk') symbol = 'hk' + code;
+          else if (p === 'us') symbol = 'us' + code.split('.')[0];
+          if (!symbol) return;
+          var t = normalizeSymbol(symbol);
+          results.push({ symbol: symbol, code: code, name: name,
+                         market: t ? t.market : 'US', secid: t ? t.secid : '' });
+        });
+        return results.slice(0, limit);
+      }).catch(function () { return []; });
+  }
+
+  function getKline(symbol, days, options) {
+    options = options || {};
+    var t = normalizeSymbol(symbol);
+    if (!t) return Promise.resolve([]);
+    days = days || 80;
+    return localApiAvailable().then(function (available) {
+      if (available && !options.skipApi) {
+        return fetchJSON(apiBase() + '/api/kline?secid=' + encodeURIComponent(t.secid) +
+          '&days=' + days, { timeout: 6000, retries: 0 })
+          .then(function (d) { return (d && d.klines) || []; })
+          .catch(function () { return getKlineJsonp(t, days); });
+      }
+      return getKlineJsonp(t, days);
+    });
+  }
+
+  function getKlineJsonp(target, days) {
+    var cb = 'ast_kline_' + (++jsonpSeq) + '_' + Date.now();
+    var url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?cb=' + cb +
+      '&secid=' + encodeURIComponent(target.secid) +
+      '&klt=101&fqt=1&end=20500101&lmt=' + days +
+      '&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57';
+    return loadScript(url, 'utf-8', cb, 9000).then(function (payload) {
+      return ((payload && payload.data && payload.data.klines) || []);
+    }).catch(function () { return []; });
+  }
+
   global.AST = {
     pages: PAGES,
+    normalizeSymbol: normalizeSymbol,
+    fetchQuotes: fetchQuotes,
+    searchSymbols: searchSymbols,
+    getKline: getKline,
     NetworkError: NetworkError,
     showToast: showToast,
     wrapTables: wrapTables,

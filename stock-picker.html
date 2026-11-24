@@ -313,6 +313,16 @@ body {
   </div>
 </div>
 
+<!-- 全市场切换与实时查询 -->
+<div id="marketBar" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border)">
+  <button type="button" class="mkt-tab active" data-market="CN" onclick="switchMarket('CN')" style="min-height:36px;padding:0 13px;border-radius:18px;border:1px solid var(--accent);background:rgba(99,102,241,.16);color:#c7c9ff;font-size:13px;cursor:pointer">A股</button>
+  <button type="button" class="mkt-tab" data-market="HK" onclick="switchMarket('HK')" style="min-height:36px;padding:0 13px;border-radius:18px;border:1px solid var(--border);background:var(--bg-sec);color:var(--text-sec);font-size:13px;cursor:pointer">港股</button>
+  <button type="button" class="mkt-tab" data-market="US" onclick="switchMarket('US')" style="min-height:36px;padding:0 13px;border-radius:18px;border:1px solid var(--border);background:var(--bg-sec);color:var(--text-sec);font-size:13px;cursor:pointer">美股</button>
+  <input id="pickerSearch" type="search" inputmode="search" placeholder="搜索代码/名称（AAPL、600519）" style="flex:1;min-width:180px;min-height:36px;padding:0 11px;background:var(--bg-sec);border:1px solid var(--border);border-radius:18px;color:var(--text);font-size:13px;outline:none">
+  <button type="button" onclick="pickerSearch()" style="min-height:36px;padding:0 14px;border:0;border-radius:18px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer">查询</button>
+  <span id="dataFreshness" style="font-size:11px;color:var(--text-sec)"></span>
+</div>
+
 <!-- 策略模板 -->
 <div class="strategy-cards">
   <div class="strategy-card active" data-strategy="conservative" onclick="selectStrategy(this)">
@@ -375,11 +385,11 @@ body {
       </div>
       <div class="filter-row">
         <div class="filter-label">基本面评分≥</div>
-        <input type="number" class="filter-input" id="minFundamental" placeholder="需财务数据" value="0" disabled style="opacity:.45;cursor:not-allowed">
+        <input type="number" class="filter-input" id="minFundamental" placeholder="0-100" value="0">
       </div>
       <div class="filter-row">
         <div class="filter-label">技术面评分≥</div>
-        <input type="number" class="filter-input" id="minTechnical" placeholder="需K线数据" value="0" disabled style="opacity:.45;cursor:not-allowed">
+        <input type="number" class="filter-input" id="minTechnical" placeholder="0-100" value="0">
       </div>
     </div>
 
@@ -395,14 +405,14 @@ body {
       </div>
       <div class="filter-row">
         <div class="filter-label">PE分位≤</div>
-        <input type="number" class="filter-input" id="maxPEPct" placeholder="需行业分布" value="100" disabled style="opacity:.45;cursor:not-allowed">
+        <input type="number" class="filter-input" id="maxPEPct" placeholder="0-100" value="100">
       </div>
     </div>
 
     <div class="filter-section">
       <div class="filter-title">📈 技术形态</div>
       <div class="checkbox-group" id="techGroup">
-        <label class="checkbox-item" style="opacity:.45;cursor:not-allowed"><input type="checkbox" value="bull" disabled>多头排列（需K线）</label>
+        <label class="checkbox-item"><input type="checkbox" value="bull">多头排列（实时K线）</label>
         <label class="checkbox-item"><input type="checkbox" value="pullback">阴线回踩</label>
         <label class="checkbox-item"><input type="checkbox" value="shrink">缩量调整</label>
         <label class="checkbox-item"><input type="checkbox" value="volume">温和放量</label>
@@ -421,7 +431,7 @@ body {
       </div>
       <div class="filter-row">
         <div class="filter-label">换手率≥(%)</div>
-        <input type="number" class="filter-input" id="minTurnover" placeholder="数据源未提供" value="0" disabled style="opacity:.45;cursor:not-allowed">
+        <input type="number" class="filter-input" id="minTurnover" placeholder="换手率%" value="0">
       </div>
       <div class="filter-row">
         <div class="filter-label">量比≥</div>
@@ -515,8 +525,82 @@ const watchlist = [
   {code:'601398',name:'工商银行',sector:'金融'},{code:'601288',name:'农业银行',sector:'金融'}
 ];
 
-// 去重
-const uniqueStocks = [...new Map(watchlist.map(s => [s.code, s])).values()];
+// 去重：三大市场股票池（全部来自实时行情接口，不再依赖静态快照）
+const CN_POOL = [...new Map(watchlist.map(s => [s.code, s])).values()];
+const HK_POOL = [
+  {code:'09988',name:'阿里巴巴-W',sector:'互联网'},{code:'00700',name:'腾讯控股',sector:'互联网'},
+  {code:'03690',name:'美团-W',sector:'互联网'},{code:'01810',name:'小米集团-W',sector:'电子'},
+  {code:'00981',name:'中芯国际',sector:'半导体'},{code:'01211',name:'比亚迪股份',sector:'汽车'},
+  {code:'02318',name:'中国平安',sector:'金融'},{code:'00939',name:'建设银行',sector:'金融'},
+  {code:'00883',name:'中国海洋石油',sector:'能源'},{code:'01088',name:'中国神华',sector:'能源'},
+  {code:'00388',name:'香港交易所',sector:'金融'},{code:'02015',name:'理想汽车-W',sector:'汽车'}
+];
+const US_POOL = [
+  {code:'AAPL',name:'苹果',sector:'科技'},{code:'NVDA',name:'英伟达',sector:'半导体'},
+  {code:'MSFT',name:'微软',sector:'科技'},{code:'GOOGL',name:'谷歌',sector:'互联网'},
+  {code:'AMZN',name:'亚马逊',sector:'互联网'},{code:'META',name:'Meta',sector:'互联网'},
+  {code:'TSLA',name:'特斯拉',sector:'汽车'},{code:'AVGO',name:'博通',sector:'半导体'},
+  {code:'AMD',name:'AMD',sector:'半导体'},{code:'NFLX',name:'奈飞',sector:'互联网'},
+  {code:'JPM',name:'摩根大通',sector:'金融'},{code:'BAC',name:'美国银行',sector:'金融'},
+  {code:'JNJ',name:'强生',sector:'医药'},{code:'UNH',name:'联合健康',sector:'医药'},
+  {code:'XOM',name:'埃克森美孚',sector:'能源'},{code:'COST',name:'好市多',sector:'消费'},
+  {code:'WMT',name:'沃尔玛',sector:'消费'},{code:'V',name:'Visa',sector:'金融'},
+  {code:'CRM',name:'赛富时',sector:'科技'},{code:'ORCL',name:'甲骨文',sector:'科技'}
+];
+let uniqueStocks = CN_POOL;
+let currentMarket = 'CN';
+let currentSymbol = '';
+let allData = [];
+let currentStrategy = 'balanced';
+let lastResults = [];
+
+function poolFor(market) { return market === 'US' ? US_POOL : market === 'HK' ? HK_POOL : CN_POOL; }
+
+async function switchMarket(market, keepSymbol) {
+  if (!['CN','HK','US'].includes(market)) return;
+  currentMarket = market;
+  uniqueStocks = poolFor(market);
+  document.querySelectorAll('.mkt-tab').forEach(b => {
+    const active = b.dataset.market === market;
+    b.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    b.style.background = active ? 'rgba(99,102,241,.16)' : 'var(--bg-sec)';
+    b.style.color = active ? '#c7c9ff' : 'var(--text-sec)';
+    b.classList.toggle('active', active);
+  });
+  document.getElementById('totalCount').textContent = uniqueStocks.length;
+  const group = document.getElementById('sectorGroup');
+  if (group) {
+    group.innerHTML = '<label class="checkbox-item active"><input type="checkbox" value="all" checked>全部</label>';
+    const oldInit = typeof initSectors === 'function';
+    if (oldInit) initSectors();
+  }
+  allData = [];
+  if (!keepSymbol) currentSymbol = '';
+  await runScreening();
+}
+
+async function pickerSearch() {
+  const q = (document.getElementById('pickerSearch').value || '').trim();
+  if (!q) { showToast('请输入股票代码或名称'); return; }
+  const direct = window.AST.normalizeSymbol(q);
+  if (direct && /^[A-Z0-9.]{4,}$/i.test(q)) {
+    if (direct.market !== currentMarket) await switchMarket(direct.market, true);
+    currentSymbol = direct.symbol;
+    uniqueStocks = [{code:direct.code, name:direct.code, sector:'查询结果'}];
+    allData = [];
+    await runScreening();
+    showToast('已查询 ' + direct.code);
+    return;
+  }
+  const rows = await window.AST.searchSymbols(q, 8);
+  if (!rows.length) { showToast('未找到匹配股票', 'error'); return; }
+  if (rows[0].market !== currentMarket) await switchMarket(rows[0].market, true);
+  currentSymbol = rows[0].symbol;
+  uniqueStocks = rows.map(r => ({code:r.code, name:r.name, sector:'查询结果'}));
+  allData = [];
+  await runScreening();
+  showToast('已找到 ' + rows.length + ' 只，按实时行情筛选');
+}
 
 // 筛选面板开关（移动端）
 function toggleFilter() {
@@ -525,9 +609,6 @@ function toggleFilter() {
   panel.classList.toggle('open');
   overlay.classList.toggle('show');
 }
-
-// 全局存储当前结果，供详情弹窗使用
-let lastResults = [];
 
 // 移动端卡片渲染（同花顺风格）
 function renderMobileCards(data) {
@@ -592,9 +673,6 @@ function applyPreset(type) {
   }
   runScreening();
 }
-let allData = [];
-let currentStrategy = 'balanced';
-
 // 初始化板块列表
 function initSectors() {
   const sectors = [...new Set(uniqueStocks.map(s => s.sector))];
@@ -646,26 +724,28 @@ function applyStrategy() {
   if (typeof runScreening === 'function') runScreening();
 }
 
-// 加载行情数据
-async function loadData() {
-  const secids = uniqueStocks.map(s => (s.code.startsWith('6') ? '1.' : '0.') + s.code);
-  const batches = [];
-  for (let i = 0; i < secids.length; i += 30) {
-    batches.push(secids.slice(i, i + 30));
+// 加载实时行情：统一走 AST 公共层（本地 /api/quote 优先，线上脚本直连）
+async function loadData(force) {
+  const symbols = uniqueStocks.map(s => {
+    const t = window.AST.normalizeSymbol(s.code);
+    return t ? t.symbol : s.code;
+  });
+  const quotes = await window.AST.fetchQuotes(symbols);
+  const stamp = document.getElementById('dataFreshness');
+  if (stamp) {
+    const src = quotes.length ? (quotes[0].source || '') : '--';
+    stamp.textContent = `实时 ${quotes.length}/${symbols.length} · ${src} · ${new Date().toLocaleTimeString('zh-CN')}`;
   }
-
-  const results = [];
-  for (const batch of batches) {
-    try {
-      const url = `https://push2delay.eastmoney.com/api/qt/ulist.np/get?secids=${batch.join(',')}&fields=f12,f14,f2,f3,f9,f23,f10,f6,f15,f16,f17,f18`;
-      const resp = await fetch(url);
-      const data = await resp.json();
-      if (data.data && data.data.diff) {
-        results.push(...data.data.diff);
-      }
-    } catch(e) { console.error('加载失败', e); }
-  }
-  return results;
+  // 下游筛选沿用旧字段命名，这里把真实值换算回 EastMoney 的放大口径。
+  return quotes.map(q => ({
+    f12: q.code, f13: q.market, f14: q.name,
+    f2: q.price * 100, f3: q.change_pct * 100, f9: q.pe * 100,
+    f23: q.pb * 100, f8: q.turnover * 100, f6: q.amount,
+    f10: q.turnover > 0 ? 100 : 0,
+    f15: q.high * 100, f16: q.low * 100, f17: q.open * 100, f18: q.prev_close * 100,
+    pe: q.pe, turnover: q.turnover, amount: q.amount, volume: q.volume,
+    market: q.market, symbol: q.symbol, quoteTime: q.time
+  }));
 }
 
 // 计算简单评分
@@ -693,17 +773,72 @@ function calcSimpleScore(d) {
   return Math.min(100, Math.max(0, score));
 }
 
+// 基本面分：用实时 PE/PB/成交额计算，不依赖静态财务快照
+function calcFundScore(d) {
+  let s = 50;
+  const pe = d.pe || 0;
+  if (pe > 0 && pe < 15) s += 20;
+  else if (pe > 0 && pe < 30) s += 10;
+  if (d.pb > 0 && d.pb < 2) s += 10;
+  if (d.amount > 1e8) s += 10;
+  return Math.min(100, Math.max(0, s));
+}
+
+// 技术面分：实时K线推导均线、多头排列与量比
+async function enrichTechnical(items, options) {
+  options = options || {};
+  const need = options.needTechnical || options.needVolume;
+  if (!need) return items;
+  const targets = items.slice(0, 60);
+  const rows = await AST.batchRun(targets, async function (item) {
+    const lines = await AST.memo('kline:' + item.symbol, 60000,
+      function () { return AST.getKline(item.symbol, 45); });
+    const closes = lines.map(l => parseFloat(String(l).split(',')[2])).filter(v => isFinite(v) && v > 0);
+    const vols = lines.map(l => parseFloat(String(l).split(',')[5])).filter(v => isFinite(v));
+    const avg = function (arr, n) {
+      const part = arr.slice(-n);
+      return part.length ? part.reduce((a, b) => a + b, 0) / part.length : 0;
+    };
+    const last = closes.length ? closes[closes.length - 1] : 0;
+    const ma5 = avg(closes, 5), ma10 = avg(closes, 10), ma20 = avg(closes, 20);
+    const bull = !!(ma5 && ma10 && ma20 && ma5 > ma10 && ma10 > ma20 && last >= ma5);
+    let tech = 50;
+    if (bull) tech += 20;
+    if (last && ma20 && last > ma20) tech += 15;
+    if (ma5 && ma10 && ma5 > ma10) tech += 10;
+    if (closes.length > 6 && closes[closes.length - 1] > closes[closes.length - 6]) tech += 5;
+    const recentVol = avg(vols, 2);
+    const baseVol = avg(vols.slice(0, -2), 5);
+    const volRatio = baseVol > 0 ? recentVol / baseVol : 0;
+    return { symbol: item.symbol, bull: bull, techScore: Math.min(100, tech), volRatio: volRatio };
+  }, { size: 6, delay: 30 });
+  const map = {};
+  rows.forEach(r => { if (r && r.symbol) map[r.symbol] = r; });
+  return items.map(item => Object.assign(item, map[item.symbol] || {}));
+}
+
 // 执行选股
 async function runScreening() {
   document.getElementById('resultArea').innerHTML = '<div class="loading"><div class="spinner"></div><div>正在选股...</div></div>';
 
   if (allData.length === 0) {
-    allData = await loadData();
+    try {
+      allData = await loadData(true);
+    } catch (e) {
+      document.getElementById('resultArea').innerHTML =
+        '<div class="empty-state"><div class="icon">⚠️</div><div>实时行情获取失败</div><div style="font-size:12px;margin-top:8px">' +
+        String(e && e.message || e) + '</div></div>';
+      return;
+    }
   }
 
-  // 获取筛选条件
+  // 获取筛选条件（全部来自实时行情 / 实时K线）
   const minScore = Number(document.getElementById('minScore').value) || 0;
   const maxScore = Number(document.getElementById('maxScore').value) || 100;
+  const minFundamental = Number(document.getElementById('minFundamental').value) || 0;
+  const minTechnical = Number(document.getElementById('minTechnical').value) || 0;
+  const maxPEPct = Number(document.getElementById('maxPEPct').value) || 100;
+  const minTurnover = Number(document.getElementById('minTurnover').value) || 0;
   const minPE = Number(document.getElementById('minPE').value) || 0;
   const maxPE = Number(document.getElementById('maxPE').value) || 100;
   // 以下条件此前只被读取、未参与过滤，本轮接线生效
@@ -728,37 +863,56 @@ async function runScreening() {
   document.querySelectorAll('#techGroup input:checked').forEach(input => techConditions.push(input.value));
 
   // 筛选
+  const validPEsAll = allData.map(d => d.pe).filter(v => v > 0).sort((a, b) => a - b);
   let filtered = allData.map(d => {
     const stock = uniqueStocks.find(s => s.code === d.f12);
     if (!stock) return null;
     const score = calcSimpleScore(d);
-    const pe = d.f9 ? Number(d.f9) / 100 : 0;
+    const pe = d.pe || 0;
     const pct = d.f3 ? Number(d.f3) / 100 : 0;
-    const turnover = d.f8 ? Number(d.f8) / 100 : 0;
-    const volRatio = d.f10 ? Number(d.f10) / 100 : 0;
-    return { ...d, stock, score, pe, pct, turnover, volRatio };
+    const turnover = d.turnover || 0;
+    let pePct = 100;
+    if (pe > 0 && validPEsAll.length) {
+      const lower = validPEsAll.filter(v => v <= pe).length;
+      pePct = Math.round(lower / validPEsAll.length * 100);
+    }
+    return {
+      ...d, stock, score, pe, pct, turnover, pePct,
+      fundamental: calcFundScore({ pe: pe, pb: d.pb || 0, amount: d.amount || 0 }),
+      volRatio: d.volRatio || 0,
+      bull: false, techScore: 0
+    };
   }).filter(item => {
     if (!item) return false;
-    // 板块筛选
     if (selectedSectors.length > 0 && !selectedSectors.includes(item.stock.sector)) return false;
-    // 评分筛选
     if (item.score < minScore || item.score > maxScore) return false;
-    // PE筛选
+    if (item.fundamental < minFundamental) return false;
+    if (item.pePct > maxPEPct) return false;
     if (item.pe > 0 && (item.pe < minPE || item.pe > maxPE)) return false;
-    // 风险排除
     if (excludeHighPE && item.pe > 0 && item.pe > 80) return false;
     if (excludeST && /ST/i.test(item.stock.name)) return false;
-    // 行情条件
     if (item.pct < minChange || item.pct > maxChange) return false;
-    if (item.volRatio > 0 && item.volRatio < minVolumeRatio) return false;
-    // 技术形态（多头排列依赖均线数据，面板已禁用）
+    if (item.turnover > 0 && item.turnover < minTurnover) return false;
     for (const t of techConditions) {
       if (t === 'pullback' && !(item.pct >= -3 && item.pct <= -1)) return false;
-      if (t === 'shrink' && !(item.volRatio > 0 && item.volRatio < 1)) return false;
-      if (t === 'volume' && !(item.volRatio >= 1 && item.volRatio <= 2)) return false;
     }
     return true;
   });
+
+  // 技术面相关条件按实时K线补齐（仅在前置筛选后执行，控制请求量）
+  const needTechnical = minTechnical > 0 || techConditions.includes('bull');
+  const needVolume = minVolumeRatio > 0 || techConditions.includes('shrink') || techConditions.includes('volume');
+  if (needTechnical || needVolume) {
+    filtered = await enrichTechnical(filtered, { needTechnical, needVolume });
+    filtered = filtered.filter(item => {
+      if (item.techScore && item.techScore < minTechnical) return false;
+      if (techConditions.includes('bull') && !item.bull) return false;
+      if (techConditions.includes('shrink') && !(item.volRatio > 0 && item.volRatio < 1)) return false;
+      if (techConditions.includes('volume') && !(item.volRatio >= 1 && item.volRatio <= 2)) return false;
+      if (item.volRatio > 0 && item.volRatio < minVolumeRatio) return false;
+      return true;
+    });
+  }
 
   // 按评分排序
   filtered.sort((a, b) => b.score - a.score);
@@ -918,12 +1072,17 @@ function viewDetail(code) {
     </div>
     <div style="display:flex;gap:10px">
       <button onclick="addFavorite('${item.stock.code}','${item.stock.name}');closeDetail()" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:14px;font-weight:600">+ 加入自选</button>
-      <button onclick="showToast('K线图需在看板查看');closeDetail()" style="flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text);font-size:14px">K线走势</button>
+      <button onclick="openQuote('${item.symbol || item.stock.code}')" style="flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text);font-size:14px">K线走势</button>
     </div>
   `;
   document.getElementById('detailSheet').classList.add('show');
   document.getElementById('detailOverlay').classList.add('show');
 }
+function openQuote(symbol) {
+  const t = window.AST.normalizeSymbol(symbol);
+  location.href = './quote.html?symbol=' + encodeURIComponent(t ? t.symbol : symbol);
+}
+
 function closeDetail(){
   document.getElementById('detailSheet').classList.remove('show');
   document.getElementById('detailOverlay').classList.remove('show');
@@ -933,9 +1092,10 @@ function closeDetail(){
 function addFavorite(code, name) {
   const favorites = JSON.parse(localStorage.getItem('astock_favorites') || '[]');
   if (!favorites.find(f => f.code === code)) {
-    const market = code.startsWith('6') ? '1' : '0';
-    const secid = market + '.' + code;
-    favorites.push({ code, name, secid, addTime: new Date().toLocaleString('zh-CN') });
+    const t = window.AST.normalizeSymbol(code);
+    const secid = t ? t.secid : ((code.startsWith('6') ? '1' : '0') + '.' + code);
+    favorites.push({ code, name, secid, symbol: t ? t.symbol : code,
+                     addTime: new Date().toLocaleString('zh-CN') });
     localStorage.setItem('astock_favorites', JSON.stringify(favorites));
     showToast(`✅ ${name} 已加入自选股`);
   } else {
@@ -951,17 +1111,32 @@ window.addEventListener('storage', function(e) {
 
 // Toast提示
 
-// 初始化
+// 初始化：支持从行情页 / 看板带 symbol 参数进入
 initSectors();
-applyStrategy();
-document.getElementById('totalCount').textContent = uniqueStocks.length;
-runScreening();
+(function () {
+  const params = new URLSearchParams(location.search);
+  const incoming = params.get('symbol') || params.get('code');
+  if (incoming) {
+    const t = window.AST.normalizeSymbol(incoming);
+    if (t) {
+      currentSymbol = t.symbol;
+      if (t.market !== currentMarket) {
+        currentMarket = t.market;
+        uniqueStocks = [{ code: t.code, name: t.code, sector: '查询结果' }];
+        document.getElementById('pickerSearch').value = t.code;
+      }
+    }
+  }
+  applyStrategy();
+  document.getElementById('totalCount').textContent = uniqueStocks.length;
+})();
 </script>
 
 <!-- 移动端底部导航 -->
 <div class="mobile-bottom-nav">
   <a class="mobile-nav-item" href="./dashboard.html"><span class="icon">📊</span>看板</a>
   <a class="mobile-nav-item active" href="./stock-picker.html"><span class="icon">🎯</span>选股</a>
+  <a class="mobile-nav-item" href="./quote.html"><span class="icon">📈</span>行情</a>
   <a class="mobile-nav-item" href="./portfolio.html"><span class="icon">💼</span>持仓</a>
   <a class="mobile-nav-item" href="./price-alert.html"><span class="icon">🔔</span>预警</a>
   <a class="mobile-nav-item" href="./mobile.html"><span class="icon">👤</span>我的</a>
@@ -1099,7 +1274,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
 
 <!-- Copyright -->
 <div style="text-align:center;font-size:11px;color:#8b95a7;padding:16px 12px calc(104px + env(safe-area-inset-bottom, 0px));line-height:1.7">
-  v4.7.6 · © 2026 Moses 版权所有<br>
+  v4.7.7 · © 2026 Moses 版权所有<br>
   <a href="mailto:moses.lee@outlook.com" style="color:#8b95a7;text-decoration:none">moses.lee@outlook.com</a>
 </div>
 
@@ -1110,7 +1285,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
   'use strict';
 
   var PAGES = ['dashboard.html', 'stock-picker.html', 'portfolio.html',
-    'price-alert.html', 'history.html', 'mobile.html',
+    'price-alert.html', 'history.html', 'mobile.html', 'quote.html',
     'strategy-comparison.html', 'parameter-sensitivity.html', 'app.html'];
 
   function NetworkError(message) {
@@ -1504,8 +1679,226 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     return next();
   }
 
+  /* ---------- 全市场行情：本地 API 优先，GitHub Pages 用跨域脚本兜底 ---------- */
+  var jsonpSeq = 0;
+  function loadScript(url, charset, key, timeout) {
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      var settled = false;
+      var timer = setTimeout(function () { finish(new Error('script timeout')); }, timeout || 8000);
+      function finish(err) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (script.parentNode) script.parentNode.removeChild(script);
+        if (err) { reject(err); return; }
+        // 不在这里清理变量：同一个脚本可能定义多个 v_xxx，由调用方读取后统一删除。
+        var value = key ? global[key] : undefined;
+        resolve(value);
+      }
+      script.src = url;
+      if (charset) script.charset = charset;
+      script.onload = function () { finish(); };
+      script.onerror = function () { finish(new Error('script load failed')); };
+      (document.head || document.body).appendChild(script);
+    });
+  }
+
+  function normalizeSymbol(raw) {
+    var value = String(raw == null ? '' : raw).trim().toUpperCase();
+    if (!value) return null;
+    if (value.indexOf('HS_') === 0) {
+      var c = value.slice(3);
+      value = (/^[695]/.test(c) ? '1.' : '0.') + c;
+    }
+    var m;
+    if ((m = /^(\d{1,3})\.([A-Z0-9]{1,10})$/.exec(value))) {
+      var no = m[1], code = m[2];
+      if (no === '1' || no === '0') {
+        return { symbol: (no === '1' ? 'sh' : 'sz') + code, code: code,
+                 secid: no + '.' + code, market: 'CN', tencent: (no === '1' ? 'sh' : 'sz') + code };
+      }
+      if (no === '116') {
+        return { symbol: 'hk' + code, code: code, secid: no + '.' + code,
+                 market: 'HK', tencent: 'hk' + code };
+      }
+      if (no === '105' || no === '106' || no === '107' || no === '100') {
+        return { symbol: 'us' + code, code: code, secid: no + '.' + code,
+                 market: 'US', tencent: 'us' + code };
+      }
+      return null;
+    }
+    if ((m = /^(SH|SZ|BJ|HK|US)([A-Z0-9]{1,10})$/.exec(value))) {
+      var p = m[1], v = m[2];
+      if (p === 'SH' || p === 'SZ' || p === 'BJ') {
+        var mk = /^[695]/.test(v) ? '1' : '0';
+        return { symbol: p.toLowerCase() + v, code: v, secid: mk + '.' + v,
+                 market: 'CN', tencent: p.toLowerCase() + v };
+      }
+      if (p === 'HK') {
+        return { symbol: 'hk' + v, code: v, secid: '116.' + v, market: 'HK', tencent: 'hk' + v };
+      }
+      return { symbol: 'us' + v, code: v, secid: '105.' + v, market: 'US', tencent: 'us' + v };
+    }
+    if (/^\d{6}$/.test(value)) {
+      var m6 = /^[695]/.test(value) ? '1' : '0';
+      return { symbol: (m6 === '1' ? 'sh' : 'sz') + value, code: value,
+               secid: m6 + '.' + value, market: 'CN', tencent: (m6 === '1' ? 'sh' : 'sz') + value };
+    }
+    if (/^\d{5}$/.test(value)) {
+      return { symbol: 'hk' + value, code: value, secid: '116.' + value,
+               market: 'HK', tencent: 'hk' + value };
+    }
+    if (/^[A-Z][A-Z0-9.\-]{0,9}$/.test(value)) {
+      var idx = { NDX: '100.NDX', IXIC: '100.NDX', DJI: '100.DJIA', DJIA: '100.DJIA',
+                  SPX: '100.SPX', INX: '100.SPX', VIX: '100.VIX' }[value] || ('105.' + value);
+      return { symbol: 'us' + value, code: value, secid: idx, market: 'US', tencent: 'us' + value };
+    }
+    return null;
+  }
+
+  function apiBase() {
+    return location.protocol === 'file:' ? '' : '';
+  }
+
+  function localApiAvailable() {
+    return memo('ast_api_probe', 60000, function () {
+      if (location.protocol === 'file:') return Promise.resolve(false);
+      return fetchJSON(apiBase() + '/api/health', { timeout: 1500, retries: 0 })
+        .then(function (d) { return !!(d && d.status === 'ok'); })
+        .catch(function () { return false; });
+    });
+  }
+
+  function num(value) {
+    var n = parseFloat(value);
+    return isFinite(n) ? n : 0;
+  }
+
+  function parseTencentQuote(raw, target) {
+    var f = String(raw || '').split('~');
+    if (f.length < 35) return null;
+    var amount = num(f[37]);
+    if (target.market === 'CN') amount *= 10000;
+    var price = num(f[3]);
+    if (!price) return null;
+    return {
+      symbol: target.symbol, code: target.code, name: f[1] || '', secid: target.secid,
+      market: target.market, price: price, prev_close: num(f[4]), open: num(f[5]),
+      volume: num(f[36]), amount: amount, change: num(f[31]), change_pct: num(f[32]),
+      high: num(f[33]), low: num(f[34]), turnover: num(f[38]), pe: num(f[39]), pb: 0,
+      total_mv: num(f[45]) * 1e8, time: f[30] || '', timestamp: 0,
+      source: 'tencent', stale: false
+    };
+  }
+
+  function fetchQuotes(symbols, options) {
+    options = options || {};
+    var list = (Array.isArray(symbols) ? symbols : [symbols]).map(normalizeSymbol).filter(Boolean);
+    if (!list.length) return Promise.resolve([]);
+    return localApiAvailable().then(function (available) {
+      if (available && !options.skipApi) {
+        return fetchJSON(apiBase() + '/api/quote?symbols=' +
+          encodeURIComponent(list.map(function (t) { return t.symbol; }).join(',')),
+          { timeout: 5000, retries: 0 }).then(function (d) {
+            if (d && Array.isArray(d.quotes) && d.quotes.length) return d.quotes;
+            throw new Error('empty quotes');
+          }).catch(function () { return fetchQuotesScript(list); });
+      }
+      return fetchQuotesScript(list);
+    });
+  }
+
+  function fetchQuotesScript(targets) {
+    var out = [];
+    var batches = [];
+    for (var i = 0; i < targets.length; i += 60) batches.push(targets.slice(i, i + 60));
+    return batches.reduce(function (chain, batch) {
+      return chain.then(function (acc) {
+        var keys = batch.map(function (t) { return 'v_' + t.tencent; });
+        var url = 'https://qt.gtimg.cn/q=' + batch.map(function (t) { return t.tencent; }).join(',');
+        return loadScript(url, 'GBK', keys[0], 8000).then(function () {
+          batch.forEach(function (t, i) {
+            var raw = global[keys[i]];
+            var q = raw ? parseTencentQuote(raw, t) : null;
+            if (q) acc.push(q);
+            try { delete global[keys[i]]; } catch (e) { global[keys[i]] = undefined; }
+          });
+          return acc;
+        }).catch(function () { return acc; });
+      });
+    }, Promise.resolve(out));
+  }
+
+  function searchSymbols(keyword, limit) {
+    var q = String(keyword || '').trim();
+    if (!q) return Promise.resolve([]);
+    limit = limit || 8;
+    return localApiAvailable().then(function (available) {
+      if (available) {
+        return fetchJSON(apiBase() + '/api/search?q=' + encodeURIComponent(q) +
+          '&limit=' + limit, { timeout: 4000, retries: 0 })
+          .then(function (d) { return (d && d.results) || []; })
+          .catch(function () { return searchSymbolsScript(q, limit); });
+      }
+      return searchSymbolsScript(q, limit);
+    });
+  }
+
+  function searchSymbolsScript(keyword, limit) {
+    return loadScript('https://smartbox.gtimg.cn/s3/?q=' + encodeURIComponent(keyword) +
+      '&t=all', 'GBK', 'v_hint', 6000).then(function (hint) {
+        var results = [];
+        String(hint || '').split('^').forEach(function (part) {
+          var f = part.split('~');
+          if (f.length < 3) return;
+          var p = f[0], code = f[1], name = f[2];
+          var symbol = '';
+          if (p === 'sh' || p === 'sz') symbol = p + code;
+          else if (p === 'hk') symbol = 'hk' + code;
+          else if (p === 'us') symbol = 'us' + code.split('.')[0];
+          if (!symbol) return;
+          var t = normalizeSymbol(symbol);
+          results.push({ symbol: symbol, code: code, name: name,
+                         market: t ? t.market : 'US', secid: t ? t.secid : '' });
+        });
+        return results.slice(0, limit);
+      }).catch(function () { return []; });
+  }
+
+  function getKline(symbol, days, options) {
+    options = options || {};
+    var t = normalizeSymbol(symbol);
+    if (!t) return Promise.resolve([]);
+    days = days || 80;
+    return localApiAvailable().then(function (available) {
+      if (available && !options.skipApi) {
+        return fetchJSON(apiBase() + '/api/kline?secid=' + encodeURIComponent(t.secid) +
+          '&days=' + days, { timeout: 6000, retries: 0 })
+          .then(function (d) { return (d && d.klines) || []; })
+          .catch(function () { return getKlineJsonp(t, days); });
+      }
+      return getKlineJsonp(t, days);
+    });
+  }
+
+  function getKlineJsonp(target, days) {
+    var cb = 'ast_kline_' + (++jsonpSeq) + '_' + Date.now();
+    var url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?cb=' + cb +
+      '&secid=' + encodeURIComponent(target.secid) +
+      '&klt=101&fqt=1&end=20500101&lmt=' + days +
+      '&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57';
+    return loadScript(url, 'utf-8', cb, 9000).then(function (payload) {
+      return ((payload && payload.data && payload.data.klines) || []);
+    }).catch(function () { return []; });
+  }
+
   global.AST = {
     pages: PAGES,
+    normalizeSymbol: normalizeSymbol,
+    fetchQuotes: fetchQuotes,
+    searchSymbols: searchSymbols,
+    getKline: getKline,
     NetworkError: NetworkError,
     showToast: showToast,
     wrapTables: wrapTables,

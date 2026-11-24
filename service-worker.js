@@ -1,5 +1,5 @@
 // A股智能选股系统 Service Worker（版本号由构建脚本同步）
-const CACHE_VERSION = 'v476';
+const CACHE_VERSION = 'v477';
 const CACHE_NAME = 'astock-pwa-' + CACHE_VERSION;
 const STATIC_CACHE = 'astock-static-' + CACHE_VERSION;
 const RUNTIME_CACHE = 'astock-runtime-' + CACHE_VERSION;
@@ -9,6 +9,7 @@ const CORE_ASSETS = [
   './',
   './manifest.json',
   './mobile.html',
+  './quote.html',
   './dashboard.html',
   './stock-picker.html',
   './portfolio.html',
@@ -94,6 +95,24 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+
+  // 实时报价/搜索必须每次回源：缓存会让美股盘中价格停在旧值
+  if (url.pathname.indexOf('/api/quote') >= 0 || url.pathname.indexOf('/api/search') >= 0) {
+    event.respondWith(
+      fetch(request).catch(async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        const empty = url.pathname.indexOf('/api/search') >= 0
+          ? { results: [], keyword: '' }
+          : { quotes: [], errors: [], count: 0, updated_at: Date.now() / 1000 };
+        return new Response(JSON.stringify(empty), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json; charset=utf-8', 'sw-offline': '1' }
+        });
+      })
+    );
+    return;
+  }
 
   if (isApiRequest(url)) {
     event.respondWith(

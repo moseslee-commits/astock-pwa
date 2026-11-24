@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>行情查询 · A股智能选股</title>
+<style>
+  :root{--bg:#0d1117;--panel:#151b26;--panel2:#1b2330;--line:#273244;--text:#e6edf6;--muted:#8b95a7;--up:#ef4b4b;--down:#22a06b;--accent:#6366f1}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;padding-bottom:calc(74px + env(safe-area-inset-bottom,0px))}
+  .head{display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 10px;border-bottom:1px solid var(--line)}
+  .head h1{font-size:17px;margin:0;font-weight:700}
+  .badge{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:3px 8px}
+  .wrap{padding:14px 14px 8px;max-width:720px;margin:0 auto}
+  .tabs{display:flex;gap:8px;margin-bottom:12px}
+  .tab{flex:1;min-height:40px;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+  .tab.active{background:rgba(99,102,241,.18);border-color:var(--accent);color:#b9bcff}
+  .searchbar{display:flex;gap:8px}
+  .searchbar input{flex:1;min-width:0;min-height:44px;padding:0 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:16px;outline:none}
+  .searchbar input:focus{border-color:var(--accent)}
+  .searchbar button{min-width:72px;min-height:44px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+  .suggest{margin:6px 0 0;padding:0;list-style:none;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+  .suggest li{padding:10px 12px;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+  .suggest li:last-child{border-bottom:0}
+  .suggest li span{color:var(--muted);font-size:12px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .chip{min-height:34px;padding:0 11px;border-radius:17px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12px;cursor:pointer;display:inline-flex;align-items:center}
+  .chip:active,.chip.sel{border-color:var(--accent);color:#c7c9ff;background:rgba(99,102,241,.14)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .qname{font-size:17px;font-weight:700}
+  .qmeta{color:var(--muted);font-size:12px;margin-top:4px}
+  .pill{font-size:11px;border:1px solid var(--line);border-radius:10px;padding:3px 7px;color:var(--muted)}
+  .price{font-size:34px;font-weight:700;letter-spacing:-.5px;margin-top:12px;line-height:1.1}
+  .chg{font-size:14px;margin-top:4px;font-weight:600}
+  .up{color:var(--up)}.down{color:var(--down)}.flat{color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 6px;margin-top:16px}
+  .cell{background:var(--panel2);border-radius:9px;padding:9px 8px}
+  .cell b{display:block;font-size:13px;font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cell span{font-size:11px;color:var(--muted)}
+  .spark{width:100%;height:110px;margin-top:14px;background:var(--panel2);border-radius:10px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+  .row h2{font-size:14px;margin:0}
+  .link{font-size:12px;color:#8b95ff;background:none;border:0;cursor:pointer}
+  .watch{display:flex;flex-wrap:wrap;gap:8px}
+  .witem{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel2);border-radius:18px;padding:7px 10px;font-size:12px;cursor:pointer}
+  .witem i{font-style:normal;color:var(--muted);font-size:14px}
+  .bar{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--muted);font-size:11px}
+  .bar button{margin-left:auto;min-height:34px;padding:0 12px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:8px;cursor:pointer}
+  .empty{color:var(--muted);font-size:13px;padding:12px 0}
+  .footer{text-align:center;color:var(--muted);font-size:11px;padding:18px 14px 8px;line-height:1.7}
+  .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;background:rgba(13,17,23,.97);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .bottom-nav a{flex:1;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);text-decoration:none;font-size:10px}
+  .bottom-nav a .icon{font-size:18px;line-height:1}
+  .bottom-nav a.active{color:#818cf8}
+  @media(min-width:768px){.wrap{padding-left:24px;padding-right:24px}.grid{grid-template-columns:repeat(4,1fr)}}
+</style>
+
+<!-- AST_STYLE_START -->
+<style id='ast-mobile-css'>
+/* AST 移动端与可访问性基线 - 构建时内联进各页面 */
+#ast-mobile-css { display: none; }
+
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px !important; }
+  button, a.btn, .tab, [role="button"] { min-height: 44px; min-width: 44px; }
+  .m-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  .m-table-scroll table { min-width: max-content; }
+  #toastContainer { right: 12px; left: 12px; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  .toast { max-width: 100%; word-break: break-word; }
+}
+
+:focus-visible {
+  outline: 2px solid #85b7eb;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+</style>
+<!-- AST_STYLE_END -->
+</head>
+<body>
+<div class="head">
+  <h1>📈 行情查询</h1>
+  <span class="badge">v<span data-app-version>4.7.7</span></span>
+</div>
+<div class="wrap">
+  <div class="tabs" id="marketTabs">
+    <button class="tab active" data-market="CN">A股</button>
+    <button class="tab" data-market="HK">港股</button>
+    <button class="tab" data-market="US">美股</button>
+  </div>
+
+  <div class="searchbar">
+    <input id="q" type="search" inputmode="search" autocomplete="off" placeholder="代码 / 名称 / 拼音，如 AAPL、600519" aria-label="股票搜索">
+    <button id="searchBtn" type="button">查询</button>
+  </div>
+  <ul class="suggest" id="suggest" hidden></ul>
+
+  <div class="chips" id="quick"></div>
+
+  <div class="card" id="quoteCard">
+    <div class="empty" id="quoteEmpty">输入代码或从快捷选项中选择，立即读取最新行情。</div>
+    <div id="quoteBody" hidden>
+      <div class="card-top">
+        <div>
+          <div class="qname" id="qName">--</div>
+          <div class="qmeta" id="qMeta">--</div>
+        </div>
+        <span class="pill" id="qPill">实时</span>
+      </div>
+      <div class="price" id="qPrice">--</div>
+      <div class="chg" id="qChange">--</div>
+      <div class="grid" id="qGrid"></div>
+      <svg class="spark" id="spark" viewBox="0 0 320 110" preserveAspectRatio="none" aria-label="近期K线走势"></svg>
+      <div class="bar">
+        <span id="qSource">--</span>
+        <button id="favBtn" type="button">☆ 加自选</button>
+        <button id="pickerBtn" type="button">去选股</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row"><h2>我的自选</h2><button class="link" id="clearFav" type="button">清空</button></div>
+    <div class="watch" id="watch"></div>
+  </div>
+
+  <div class="footer">
+    数据来自公开行情接口，盘中约 10~15 秒刷新，可能有延时。<br>
+    仅供学习研究，不构成投资建议。<br>
+    <a href="./mobile.html" style="color:#8b95ff">版本与设置</a>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <a href="./dashboard.html"><span class="icon">📊</span><span>看板</span></a>
+  <a href="./stock-picker.html"><span class="icon">🎯</span><span>选股</span></a>
+  <a class="active" href="./quote.html"><span class="icon">📈</span><span>行情</span></a>
+  <a href="./portfolio.html"><span class="icon">💼</span><span>持仓</span></a>
+  <a href="./price-alert.html"><span class="icon">🔔</span><span>预警</span></a>
+  <a href="./mobile.html"><span class="icon">👤</span><span>我的</span></a>
+</div>
+
+<script>
+window.APP_VERSION = '4.7.7';
+</script>
+<script>
+(function () {
+  'use strict';
+  var QUICK = {
+    CN: [['600519','贵州茅台'],['000001','平安银行'],['300750','宁德时代'],['688981','中芯国际'],['000858','五粮液']],
+    HK: [['09988','阿里巴巴'],['00700','腾讯控股'],['03690','美团'],['01810','小米集团'],['00981','中芯国际']],
+    US: [['AAPL','苹果'],['NVDA','英伟达'],['TSLA','特斯拉'],['MSFT','微软'],['GOOGL','谷歌'],['AMZN','亚马逊'],['META','Meta'],['AMD','AMD']]
+  };
+  var state = { market: 'CN', symbol: '', timer: null, kline: [] };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function localeMarket(m) { return { CN: 'A股', HK: '港股', US: '美股' }[m] || m; }
+  function colorClass(v) { return v > 0 ? 'up' : v < 0 ? 'down' : 'flat'; }
+  function fmt(n, digits) {
+    if (!isFinite(n)) return '--';
+    return n.toLocaleString('zh-CN', { minimumFractionDigits: digits === undefined ? 2 : digits,
+                                        maximumFractionDigits: digits === undefined ? 2 : digits });
+  }
+  function shortVol(v) {
+    if (!v) return '--';
+    if (v >= 1e8) return (v / 1e8).toFixed(2) + '亿';
+    if (v >= 1e4) return (v / 1e4).toFixed(2) + '万';
+    return String(Math.round(v));
+  }
+
+  function favs() { return window.AST.storage.get('astock_favs', []); }
+  function saveFavs(list) { window.AST.storage.set('astock_favs', list); renderFavs(); }
+
+  function renderFavs() {
+    var box = $('watch');
+    var list = favs();
+    if (!list.length) { box.innerHTML = '<div class="empty">还没有自选，点上方「加自选」保存。</div>'; return; }
+    box.innerHTML = '';
+    list.forEach(function (s) {
+      var el = document.createElement('div');
+      el.className = 'witem';
+      el.innerHTML = '<span>' + String(s.name || s.symbol) + '</span><i>×</i>';
+      el.onclick = function () { saveFavs(favs().filter(function (x) { return x.symbol !== s.symbol; })); };
+      var open = document.createElement('span');
+      open.textContent = '';
+      el.onclick = function (e) {
+        e.stopPropagation();
+        selectSymbol(s.symbol);
+      };
+      box.appendChild(el);
+    });
+  }
+
+  function renderQuick() {
+    var box = $('quick');
+    box.innerHTML = '';
+    QUICK[state.market].forEach(function (item) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip';
+      b.textContent = item[1] + ' ' + item[0];
+      b.onclick = function () { selectSymbol(item[0]); };
+      box.appendChild(b);
+    });
+    favs().filter(function (s) { return s.market === state.market; }).forEach(function (s) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip sel';
+      b.textContent = '★ ' + (s.name || s.code);
+      b.onclick = function () { selectSymbol(s.symbol); };
+      box.appendChild(b);
+    });
+  }
+
+  function selectSymbol(raw) {
+    var t = window.AST.normalizeSymbol(raw);
+    if (!t) { window.AST.showToast('无法识别代码：' + raw, 'error'); return; }
+    state.symbol = t.symbol;
+    if (t.market !== state.market) switchMarket(t.market, false);
+    $('q').value = t.code;
+    $('suggest').hidden = true;
+    renderQuick();
+    loadQuote(true);
+  }
+
+  function switchMarket(market, reload) {
+    state.market = market;
+    ['CN', 'HK', 'US'].forEach(function (m) {
+      var b = document.querySelector('.tab[data-market="' + m + '"]');
+      if (b) b.classList.toggle('active', m === market);
+    });
+    $('q').placeholder = market === 'US' ? '代码 / 名称，如 AAPL、NVDA' :
+      (market === 'HK' ? '代码 / 名称，如 09988、腾讯' : '代码 / 名称，如 600519、贵州茅台');
+    $('suggest').hidden = true;
+    renderQuick();
+    if (reload !== false && state.symbol) {
+      var t = window.AST.normalizeSymbol(state.symbol);
+      if (t && t.market !== market) state.symbol = '';
+    }
+  }
+
+  function renderQuote(q) {
+    if (!q) return;
+    $('quoteEmpty').hidden = true;
+    $('quoteBody').hidden = false;
+    $('qName').textContent = q.name || q.code;
+    $('qMeta').textContent = (q.code || '') + ' · ' + localeMarket(q.market) + (q.secid ? ' · ' + q.secid : '');
+    $('qPrice').textContent = fmt(q.price);
+    $('qPrice').className = 'price ' + colorClass(q.change || q.change_pct);
+    $('qChange').textContent = (q.change >= 0 ? '+' : '') + fmt(q.change) + '  ' +
+      window.AST.formatPct(q.change_pct || 0);
+    $('qChange').className = 'chg ' + colorClass(q.change || q.change_pct);
+    $('qPill').textContent = q.stale ? '缓存' : '实时';
+    var cells = [
+      ['今开', fmt(q.open)], ['最高', fmt(q.high)], ['最低', fmt(q.low)],
+      ['昨收', fmt(q.prev_close)], ['成交量', shortVol(q.volume)], ['成交额', shortVol(q.amount)],
+      ['换手率', q.turnover ? fmt(q.turnover) + '%' : '--'], ['市盈率', q.pe ? fmt(q.pe) : '--'],
+      ['行情时间', q.time || '--']
+    ];
+    $('qGrid').innerHTML = cells.map(function (c) {
+      return '<div class="cell"><span>' + c[0] + '</span><b>' + c[1] + '</b></div>';
+    }).join('');
+    $('qSource').textContent = '来源：' + (q.source || '--');
+    var isFav = favs().some(function (x) { return x.symbol === q.symbol; });
+    $('favBtn').textContent = isFav ? '★ 已自选' : '☆ 加自选';
+    $('pickerBtn').onclick = function () {
+      location.href = './stock-picker.html?symbol=' + encodeURIComponent(q.symbol);
+    };
+  }
+
+  function renderSpark(lines) {
+    state.kline = lines || [];
+    var svg = $('spark');
+    if (!state.kline.length) { svg.innerHTML = '<text x="10" y="55" fill="#8b95a7" font-size="12">暂无K线数据</text>'; return; }
+    var vals = state.kline.slice(-60).map(function (l) { return parseFloat(String(l).split(',')[2]); })
+      .filter(function (v) { return isFinite(v); });
+    if (!vals.length) { svg.innerHTML = ''; return; }
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    var span = max - min || 1;
+    var pts = vals.map(function (v, i) {
+      return (i / Math.max(1, vals.length - 1) * 318 + 1).toFixed(1) + ',' +
+        (100 - (v - min) / span * 90).toFixed(1);
+    });
+    var up = vals[vals.length - 1] >= vals[0];
+    var color = up ? '#ef4b4b' : '#22a06b';
+    svg.innerHTML = '<polyline fill="none" stroke="' + color + '" stroke-width="2" points="' + pts.join(' ') + '"/>' +
+      '<text x="8" y="16" fill="#8b95a7" font-size="10">' + vals.length + '日走势 · ' +
+      fmt(min) + ' ~ ' + fmt(max) + '</text>';
+  }
+
+  function loadQuote(manual) {
+    if (!state.symbol) {
+      $('quoteEmpty').hidden = false;
+      $('quoteBody').hidden = true;
+      return Promise.resolve(null);
+    }
+    return window.AST.fetchQuotes([state.symbol]).then(function (list) {
+      if (!list || !list.length) throw new Error('未取到行情');
+      renderQuote(list[0]);
+      if (manual) window.AST.showToast('行情已更新', 'success');
+      return window.AST.getKline(state.symbol, 60).then(renderSpark);
+    }).catch(function (e) {
+      if (manual) window.AST.reportFailure('行情', e, '可切换网络后重试');
+    });
+  }
+
+  function doSearch() {
+    var q = $('q').value.trim();
+    if (!q) { window.AST.showToast('请输入代码或名称', 'info'); return; }
+    var direct = window.AST.normalizeSymbol(q);
+    if (direct && /^[A-Z0-9.]{4,}$/i.test(q)) { selectSymbol(q); return; }
+    window.AST.searchSymbols(q, 8).then(function (rows) {
+      var box = $('suggest');
+      box.innerHTML = '';
+      if (!rows.length) {
+        box.innerHTML = '<li>未找到匹配标的<span>可尝试股票代码</span></li>';
+        box.hidden = false;
+        return;
+      }
+      rows.forEach(function (r) {
+        var li = document.createElement('li');
+        li.innerHTML = '<span style="color:#e6edf6">' + r.name + '</span><span>' +
+          localeMarket(r.market) + ' · ' + r.code + '</span>';
+        li.onclick = function () { selectSymbol(r.symbol); };
+        box.appendChild(li);
+      });
+      box.hidden = false;
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.tab').forEach(function (b) {
+      b.onclick = function () { switchMarket(b.dataset.market, true); };
+    });
+    $('searchBtn').onclick = doSearch;
+    $('q').addEventListener('keydown', function (e) { if (e.key === 'Enter') doSearch(); });
+    $('favBtn').onclick = function () {
+      if (!state.symbol) return;
+      var list = favs();
+      var q = { symbol: state.symbol, code: $('q').value.trim(),
+                name: $('qName').textContent, market: state.market };
+      if (list.some(function (x) { return x.symbol === state.symbol; })) {
+        saveFavs(list.filter(function (x) { return x.symbol !== state.symbol; }));
+        window.AST.showToast('已移除自选', 'info');
+      } else {
+        list.push(q); saveFavs(list); window.AST.showToast('已加入自选', 'success');
+      }
+      renderQuick();
+      loadQuote(false);
+    };
+    $('clearFav').onclick = function () { saveFavs([]); renderQuick(); };
+
+    renderFavs();
+    renderQuick();
+    var params = new URLSearchParams(location.search);
+    var initial = params.get('symbol') || params.get('code');
+    if (initial) selectSymbol(initial);
+    else if (favs().length) selectSymbol(favs()[0].symbol);
+
+    if (state.timer) clearInterval(state.timer);
+    state.timer = setInterval(function () {
+      if (!document.hidden && state.symbol) loadQuote(false);
+    }, 15000);
+  });
+})();
+</script>
+
+<!-- AST_COMMON_START -->
+<script>
+/* AST 公共层 - 单一实现，构建时内联进各页面（保持单文件打开即用） */
+(function (global) {
+  'use strict';
+
+  var PAGES = ['dashboard.html', 'stock-picker.html', 'portfolio.html',
+    'price-alert.html', 'history.html', 'mobile.html', 'quote.html',
+    'strategy-comparison.html', 'parameter-sensitivity.html', 'app.html'];
+
+  function NetworkError(message) {
+    this.name = 'NetworkError';
+    this.message = message;
+  }
+  NetworkError.prototype = Object.create(Error.prototype);
+
+  function toastContainer() {
+    var el = document.getElementById('toastContainer');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'toastContainer';
+    el.style.cssText = 'position:fixed;right:16px;bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none';
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function showToast(msg, type) {
+    var container = toastContainer();
+    var toast = document.createElement('div');
+    toast.className = 'toast ' + (type || 'success');
+    toast.textContent = String(msg);
+    toast.style.cssText = 'background:#182231;color:#e6edf6;border:1px solid #2b3a4d;border-radius:6px;padding:9px 14px;font-size:13px;max-width:82vw;box-shadow:none';
+    container.appendChild(toast);
+    setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3000);
+  }
+
+  var wrapBusy = false;
+  function wrapTables() {
+    if (wrapBusy || window.innerWidth > 768) return;
+    wrapBusy = true;
+    try {
+      var tables = document.querySelectorAll('table');
+      for (var i = 0; i < tables.length; i++) {
+        var t = tables[i];
+        if (!t.parentNode || t.parentNode.classList.contains('m-table-scroll')) continue;
+        var w = document.createElement('div');
+        w.className = 'm-table-scroll';
+        w.style.cssText = 'overflow-x:auto;-webkit-overflow-scrolling:touch';
+        t.parentNode.insertBefore(w, t);
+        w.appendChild(t);
+      }
+    } finally {
+      wrapBusy = false;
+    }
+  }
+
+  function get(key, fallback) {
+    try {
+      var raw = global.localStorage.getItem(key);
+      return raw === null ? fallback : JSON.parse(raw);
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function set(key, value) {
+    try {
+      global.localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function fetchJSON(url, options) {
+    options = options || {};
+    var timeout = options.timeout || 8000;
+    var retries = options.retries === undefined ? 1 : options.retries;
+    var attempt = 0;
+    function once() {
+      var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, timeout) : null;
+      var init = Object.assign({}, options.init || {});
+      if (ctrl) init.signal = ctrl.signal;
+      return global.fetch(url, init).then(function (resp) {
+        if (timer) clearTimeout(timer);
+        if (!resp.ok) throw new NetworkError(url + ' HTTP ' + resp.status);
+        return resp.json();
+      }).catch(function (err) {
+        if (timer) clearTimeout(timer);
+        if (attempt++ < retries) return once();
+        throw new NetworkError(url + ' ' + (err && err.message ? err.message : '请求失败'));
+      });
+    }
+    return once();
+  }
+
+  function reportFailure(area, err, fallbackText) {
+    var msg = (area || '数据') + '不可用：' + (err && err.message ? err.message : String(err));
+    showToast(msg, 'error');
+    if (fallbackText) showToast(fallbackText, 'info');
+    return null;
+  }
+
+  function calcTechScore(count) {
+    return Math.min(100, 30 + Math.max(0, Number(count) || 0) * 10);
+  }
+
+  function formatPct(value) {
+    var n = Number(value);
+    if (!isFinite(n)) return '--';
+    return (n > 0 ? '+' : '') + n.toFixed(2) + '%';
+  }
+
+  function compareVersions(a, b) {
+    function parts(v) {
+      return String(v == null ? '' : v).replace(/^v/i, '').split(/[.\-]/)
+        .map(function (x) { var n = parseInt(x, 10); return isFinite(n) ? n : 0; });
+    }
+    var pa = parts(a), pb = parts(b);
+    var len = Math.max(pa.length, pb.length);
+    for (var i = 0; i < len; i++) {
+      var x = pa[i] || 0, y = pb[i] || 0;
+      if (x > y) return 1;
+      if (x < y) return -1;
+    }
+    return 0;
+  }
+
+  function updateURL() {
+    return 'https://moseslee-commits.github.io/astock-pwa/version.js';
+  }
+
+  function checkUpdate(options) {
+    options = options || {};
+    var local = options.localVersion;
+    if (!local) {
+      var badge = document.querySelector('.header-badge');
+      local = (badge && badge.textContent || '').replace(/^v/i, '').trim();
+    }
+    if (!local && options.useAppVersion && global.APP_VERSION) local = global.APP_VERSION;
+    var url = options.url || updateURL();
+    var script = document.createElement('script');
+    var settled = false;
+    var timer = setTimeout(function () { finish(new Error('版本检查超时')); }, options.timeout || 6000);
+
+    function finish(err) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      var release = global.ASTOCK_RELEASE;
+      if (err) {
+        if (options.onError) options.onError(err);
+        return;
+      }
+      if (!release || !release.version) {
+        if (options.onError) options.onError(new Error('版本清单无效'));
+        return;
+      }
+      if (options.onRelease) options.onRelease(release);
+      if (compareVersions(release.version, local) > 0) {
+        if (options.onUpdate) options.onUpdate(release, local);
+      } else if (options.onCurrent) {
+        options.onCurrent(release, local);
+      }
+    }
+
+    global.ASTOCK_RELEASE = undefined;
+    script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now();
+    script.onload = function () { finish(); };
+    script.onerror = function () { finish(new Error('版本清单加载失败')); };
+    (document.head || document.body).appendChild(script);
+  }
+
+  function showUpdateBanner(release, options) {
+    options = options || {};
+    var id = 'ast-update-banner';
+    var old = document.getElementById(id);
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    var box = document.createElement('div');
+    box.id = id;
+    box.setAttribute('role', 'status');
+    box.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(8px + env(safe-area-inset-top,0px));z-index:100000;background:#1b2740;color:#e6edf6;border:1px solid #3b82f6;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(0,0,0,.35);font-size:13px';
+    var text = document.createElement('div');
+    text.style.cssText = 'flex:1;line-height:1.5';
+    text.textContent = '发现新版本 v' + release.version + (release.notes ? '：' + release.notes : '');
+    var btn = document.createElement('a');
+    btn.textContent = '下载更新';
+    btn.href = release.apk || release.page || updateURL();
+    btn.style.cssText = 'flex:none;background:#3b82f6;color:#fff;border-radius:6px;padding:6px 12px;text-decoration:none;white-space:nowrap';
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = '×';
+    close.setAttribute('aria-label', '关闭更新提示');
+    close.style.cssText = 'flex:none;background:transparent;color:#94a3b8;border:0;font-size:18px;line-height:1;cursor:pointer';
+    close.onclick = function () { if (box.parentNode) box.parentNode.removeChild(box); };
+    box.appendChild(text);
+    box.appendChild(btn);
+    box.appendChild(close);
+    (document.body || document.documentElement).appendChild(box);
+    if (options.onShow) options.onShow(box);
+    return box;
+  }
+
+  // 防骚扰记忆：用户点“稍后再说”后，记住该版本，本次安装内不再重复弹窗。
+  var SKIP_KEY = 'astock_update_skipped';
+  function skippedVersion() {
+    try { return global.localStorage && global.localStorage.getItem(SKIP_KEY) || ''; }
+    catch (e) { return ''; }
+  }
+  function rememberSkip(version) {
+    try { if (global.localStorage) global.localStorage.setItem(SKIP_KEY, version); }
+    catch (e) { /* 隐私模式/沙箱下忽略 */ }
+  }
+  function clearSkip() {
+    try { if (global.localStorage) global.localStorage.removeItem(SKIP_KEY); }
+    catch (e) { /* 忽略 */ }
+  }
+
+  // 启动时模态更新弹窗：显示版本号、更新说明、下载按钮。
+  function showUpdateDialog(release, options) {
+    options = options || {};
+    var id = 'ast-update-dialog';
+    var old = document.getElementById(id);
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+
+    var mask = document.createElement('div');
+    mask.id = id;
+    mask.setAttribute('role', 'dialog');
+    mask.setAttribute('aria-modal', 'true');
+    mask.style.cssText = 'position:fixed;inset:0;z-index:200000;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:24px';
+
+    var card = document.createElement('div');
+    card.style.cssText = 'width:100%;max-width:360px;background:#1a1f2e;color:#e0e6ed;border:1px solid #2a3142;border-radius:16px;padding:22px 20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.5)';
+
+    var title = document.createElement('div');
+    title.style.cssText = 'font-size:17px;font-weight:700;margin-bottom:6px';
+    title.textContent = '发现新版本 v' + release.version;
+
+    var sub = document.createElement('div');
+    sub.style.cssText = 'font-size:12px;color:#8b95a7;margin-bottom:12px';
+    sub.textContent = '当前版本 v' + (options.localVersion || currentVersion());
+
+    var notes = document.createElement('div');
+    notes.style.cssText = 'font-size:13px;line-height:1.65;color:#c3cbd8;background:rgba(99,102,241,.1);border-radius:10px;padding:10px 12px;margin-bottom:18px;white-space:pre-wrap';
+    notes.textContent = release.notes || '优化了稳定性与体验，建议更新。';
+
+    var actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:10px';
+
+    var later = document.createElement('button');
+    later.type = 'button';
+    later.textContent = '稍后再说';
+    later.style.cssText = 'flex:1;background:transparent;color:#8b95a7;border:1px solid #2a3142;border-radius:9px;padding:11px;font-size:14px;cursor:pointer';
+    later.onclick = function () {
+      rememberSkip(release.version);
+      if (mask.parentNode) mask.parentNode.removeChild(mask);
+      if (options.onLater) options.onLater();
+    };
+
+    var download = document.createElement('a');
+    download.textContent = '立即下载';
+    download.href = release.apk || release.page || updateURL();
+    download.setAttribute('download', '');
+    download.style.cssText = 'flex:1;text-align:center;background:#6366f1;color:#fff;border-radius:9px;padding:11px;font-size:14px;text-decoration:none;font-weight:600';
+    download.onclick = function () {
+      clearSkip();
+      if (options.onDownload) options.onDownload();
+    };
+
+    actions.appendChild(later);
+    actions.appendChild(download);
+    card.appendChild(title);
+    card.appendChild(sub);
+    card.appendChild(notes);
+    card.appendChild(actions);
+    mask.appendChild(card);
+    mask.onclick = function (e) { if (e.target === mask) later.onclick(); };
+    (document.body || document.documentElement).appendChild(mask);
+    if (options.onShow) options.onShow(mask);
+    return mask;
+  }
+
+  // 统一入口：APK 与 PWA 打开时都检查；发现新版本弹模态框，尊重“稍后”记忆。
+  function maybeCheckUpdate(options) {
+    options = options || {};
+    checkUpdate({
+      localVersion: options.localVersion || global.APP_VERSION,
+      useAppVersion: true,
+      timeout: options.timeout || 8000,
+      onRelease: options.onRelease,
+      onUpdate: function (release, local) {
+        if (skippedVersion() === release.version) return;
+        showUpdateDialog(release, {
+          localVersion: local,
+          onDownload: options.onDownload,
+          onLater: options.onLater
+        });
+      },
+      onError: options.onError || function () {}
+    });
+  }
+
+  // 手动检查：忽略“稍后”记忆，无新版本时给出明确反馈。
+  function checkUpdateNow() {
+    clearSkip();
+    maybeCheckUpdate({
+      localVersion: global.APP_VERSION,
+      onError: function () {
+        if (global.showToast) showToast('检查失败，请确认网络后重试', 'error');
+      },
+      onRelease: function (release) {
+        if (compareVersions(release.version, currentVersion()) <= 0 &&
+            global.showToast) showToast('已是最新版本 v' + release.version, 'success');
+      }
+    });
+  }
+
+  function registerServiceWorker(options) {
+    options = options || {};
+    if (typeof navigator === 'undefined' || !navigator.serviceWorker ||
+        /^file:/i.test(location.protocol)) return Promise.resolve(null);
+    var notified = false;
+    var hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (notified || !hadController) return;
+      notified = true;
+      if (options.onUpdate) options.onUpdate();
+    });
+    return navigator.serviceWorker.register(options.script || './service-worker.js',
+      options.scope ? { scope: options.scope } : undefined).catch(function () { return null; });
+  }
+
+  function currentVersion() {
+    // 本地版本优先：APK 由 gen_assets 注入，PWA 由构建脚本注入。
+    // 线上清单只作兜底，避免把“当前版本”错显示成可升级的最新版。
+    return global.APP_VERSION || (global.ASTOCK_RELEASE && global.ASTOCK_RELEASE.version) || '';
+  }
+
+  // 单一真相源：把所有 [data-app-version] 元素填充为当前版本，
+  // 避免页面内硬编码版本与 VERSION 不一致（旧版本残留在“关于”弹层）。
+  function syncVersionLabels() {
+    var v = currentVersion();
+    if (!v) return;
+    var nodes = document.querySelectorAll('[data-app-version]');
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = 'v' + v;
+  }
+
+  function initUpdateChecks() {
+    syncVersionLabels();
+    // APK 与 PWA 打开时都检查版本：新版本上传后，用户进入应用即弹下载提示。
+    maybeCheckUpdate({
+      localVersion: global.APP_VERSION,
+      onError: function () { /* 离线时静默降级，不影响离线使用 */ }
+    });
+    registerServiceWorker({
+      onUpdate: function () {
+        // 版本弹窗已负责提示下载；这里只提示网页版缓存已更新，避免重复 confirm。
+        showToast('网页版本已更新，刷新后生效', 'info');
+      }
+    });
+  }
+
+  var memoStore = {};
+  function memo(key, ttl, loader) {
+    var hit = memoStore[key];
+    var now = Date.now();
+    if (hit && now - hit.time < ttl) return Promise.resolve(hit.value);
+    return Promise.resolve().then(loader).then(function (value) {
+      memoStore[key] = { time: Date.now(), value: value };
+      return value;
+    });
+  }
+
+  function clearMemo() { memoStore = {}; }
+
+  function batchRun(items, worker, options) {
+    options = options || {};
+    var size = options.size || 5;
+    var delay = options.delay || 0;
+    var results = [];
+    var index = 0;
+    function next() {
+      if (index >= items.length) return Promise.resolve(results);
+      var batch = items.slice(index, index + size);
+      index += size;
+      return Promise.all(batch.map(function (item, i) {
+        return Promise.resolve().then(function () { return worker(item, i); })
+          .catch(function (e) { return { error: e && e.message ? e.message : String(e) }; });
+      })).then(function (values) {
+        results = results.concat(values);
+        if (options.onProgress) options.onProgress(results.length, items.length);
+        if (delay && index < items.length) {
+          return new Promise(function (resolve) { setTimeout(resolve, delay); });
+        }
+      }).then(next);
+    }
+    return next();
+  }
+
+  /* ---------- 全市场行情：本地 API 优先，GitHub Pages 用跨域脚本兜底 ---------- */
+  var jsonpSeq = 0;
+  function loadScript(url, charset, key, timeout) {
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      var settled = false;
+      var timer = setTimeout(function () { finish(new Error('script timeout')); }, timeout || 8000);
+      function finish(err) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (script.parentNode) script.parentNode.removeChild(script);
+        if (err) { reject(err); return; }
+        // 不在这里清理变量：同一个脚本可能定义多个 v_xxx，由调用方读取后统一删除。
+        var value = key ? global[key] : undefined;
+        resolve(value);
+      }
+      script.src = url;
+      if (charset) script.charset = charset;
+      script.onload = function () { finish(); };
+      script.onerror = function () { finish(new Error('script load failed')); };
+      (document.head || document.body).appendChild(script);
+    });
+  }
+
+  function normalizeSymbol(raw) {
+    var value = String(raw == null ? '' : raw).trim().toUpperCase();
+    if (!value) return null;
+    if (value.indexOf('HS_') === 0) {
+      var c = value.slice(3);
+      value = (/^[695]/.test(c) ? '1.' : '0.') + c;
+    }
+    var m;
+    if ((m = /^(\d{1,3})\.([A-Z0-9]{1,10})$/.exec(value))) {
+      var no = m[1], code = m[2];
+      if (no === '1' || no === '0') {
+        return { symbol: (no === '1' ? 'sh' : 'sz') + code, code: code,
+                 secid: no + '.' + code, market: 'CN', tencent: (no === '1' ? 'sh' : 'sz') + code };
+      }
+      if (no === '116') {
+        return { symbol: 'hk' + code, code: code, secid: no + '.' + code,
+                 market: 'HK', tencent: 'hk' + code };
+      }
+      if (no === '105' || no === '106' || no === '107' || no === '100') {
+        return { symbol: 'us' + code, code: code, secid: no + '.' + code,
+                 market: 'US', tencent: 'us' + code };
+      }
+      return null;
+    }
+    if ((m = /^(SH|SZ|BJ|HK|US)([A-Z0-9]{1,10})$/.exec(value))) {
+      var p = m[1], v = m[2];
+      if (p === 'SH' || p === 'SZ' || p === 'BJ') {
+        var mk = /^[695]/.test(v) ? '1' : '0';
+        return { symbol: p.toLowerCase() + v, code: v, secid: mk + '.' + v,
+                 market: 'CN', tencent: p.toLowerCase() + v };
+      }
+      if (p === 'HK') {
+        return { symbol: 'hk' + v, code: v, secid: '116.' + v, market: 'HK', tencent: 'hk' + v };
+      }
+      return { symbol: 'us' + v, code: v, secid: '105.' + v, market: 'US', tencent: 'us' + v };
+    }
+    if (/^\d{6}$/.test(value)) {
+      var m6 = /^[695]/.test(value) ? '1' : '0';
+      return { symbol: (m6 === '1' ? 'sh' : 'sz') + value, code: value,
+               secid: m6 + '.' + value, market: 'CN', tencent: (m6 === '1' ? 'sh' : 'sz') + value };
+    }
+    if (/^\d{5}$/.test(value)) {
+      return { symbol: 'hk' + value, code: value, secid: '116.' + value,
+               market: 'HK', tencent: 'hk' + value };
+    }
+    if (/^[A-Z][A-Z0-9.\-]{0,9}$/.test(value)) {
+      var idx = { NDX: '100.NDX', IXIC: '100.NDX', DJI: '100.DJIA', DJIA: '100.DJIA',
+                  SPX: '100.SPX', INX: '100.SPX', VIX: '100.VIX' }[value] || ('105.' + value);
+      return { symbol: 'us' + value, code: value, secid: idx, market: 'US', tencent: 'us' + value };
+    }
+    return null;
+  }
+
+  function apiBase() {
+    return location.protocol === 'file:' ? '' : '';
+  }
+
+  function localApiAvailable() {
+    return memo('ast_api_probe', 60000, function () {
+      if (location.protocol === 'file:') return Promise.resolve(false);
+      return fetchJSON(apiBase() + '/api/health', { timeout: 1500, retries: 0 })
+        .then(function (d) { return !!(d && d.status === 'ok'); })
+        .catch(function () { return false; });
+    });
+  }
+
+  function num(value) {
+    var n = parseFloat(value);
+    return isFinite(n) ? n : 0;
+  }
+
+  function parseTencentQuote(raw, target) {
+    var f = String(raw || '').split('~');
+    if (f.length < 35) return null;
+    var amount = num(f[37]);
+    if (target.market === 'CN') amount *= 10000;
+    var price = num(f[3]);
+    if (!price) return null;
+    return {
+      symbol: target.symbol, code: target.code, name: f[1] || '', secid: target.secid,
+      market: target.market, price: price, prev_close: num(f[4]), open: num(f[5]),
+      volume: num(f[36]), amount: amount, change: num(f[31]), change_pct: num(f[32]),
+      high: num(f[33]), low: num(f[34]), turnover: num(f[38]), pe: num(f[39]), pb: 0,
+      total_mv: num(f[45]) * 1e8, time: f[30] || '', timestamp: 0,
+      source: 'tencent', stale: false
+    };
+  }
+
+  function fetchQuotes(symbols, options) {
+    options = options || {};
+    var list = (Array.isArray(symbols) ? symbols : [symbols]).map(normalizeSymbol).filter(Boolean);
+    if (!list.length) return Promise.resolve([]);
+    return localApiAvailable().then(function (available) {
+      if (available && !options.skipApi) {
+        return fetchJSON(apiBase() + '/api/quote?symbols=' +
+          encodeURIComponent(list.map(function (t) { return t.symbol; }).join(',')),
+          { timeout: 5000, retries: 0 }).then(function (d) {
+            if (d && Array.isArray(d.quotes) && d.quotes.length) return d.quotes;
+            throw new Error('empty quotes');
+          }).catch(function () { return fetchQuotesScript(list); });
+      }
+      return fetchQuotesScript(list);
+    });
+  }
+
+  function fetchQuotesScript(targets) {
+    var out = [];
+    var batches = [];
+    for (var i = 0; i < targets.length; i += 60) batches.push(targets.slice(i, i + 60));
+    return batches.reduce(function (chain, batch) {
+      return chain.then(function (acc) {
+        var keys = batch.map(function (t) { return 'v_' + t.tencent; });
+        var url = 'https://qt.gtimg.cn/q=' + batch.map(function (t) { return t.tencent; }).join(',');
+        return loadScript(url, 'GBK', keys[0], 8000).then(function () {
+          batch.forEach(function (t, i) {
+            var raw = global[keys[i]];
+            var q = raw ? parseTencentQuote(raw, t) : null;
+            if (q) acc.push(q);
+            try { delete global[keys[i]]; } catch (e) { global[keys[i]] = undefined; }
+          });
+          return acc;
+        }).catch(function () { return acc; });
+      });
+    }, Promise.resolve(out));
+  }
+
+  function searchSymbols(keyword, limit) {
+    var q = String(keyword || '').trim();
+    if (!q) return Promise.resolve([]);
+    limit = limit || 8;
+    return localApiAvailable().then(function (available) {
+      if (available) {
+        return fetchJSON(apiBase() + '/api/search?q=' + encodeURIComponent(q) +
+          '&limit=' + limit, { timeout: 4000, retries: 0 })
+          .then(function (d) { return (d && d.results) || []; })
+          .catch(function () { return searchSymbolsScript(q, limit); });
+      }
+      return searchSymbolsScript(q, limit);
+    });
+  }
+
+  function searchSymbolsScript(keyword, limit) {
+    return loadScript('https://smartbox.gtimg.cn/s3/?q=' + encodeURIComponent(keyword) +
+      '&t=all', 'GBK', 'v_hint', 6000).then(function (hint) {
+        var results = [];
+        String(hint || '').split('^').forEach(function (part) {
+          var f = part.split('~');
+          if (f.length < 3) return;
+          var p = f[0], code = f[1], name = f[2];
+          var symbol = '';
+          if (p === 'sh' || p === 'sz') symbol = p + code;
+          else if (p === 'hk') symbol = 'hk' + code;
+          else if (p === 'us') symbol = 'us' + code.split('.')[0];
+          if (!symbol) return;
+          var t = normalizeSymbol(symbol);
+          results.push({ symbol: symbol, code: code, name: name,
+                         market: t ? t.market : 'US', secid: t ? t.secid : '' });
+        });
+        return results.slice(0, limit);
+      }).catch(function () { return []; });
+  }
+
+  function getKline(symbol, days, options) {
+    options = options || {};
+    var t = normalizeSymbol(symbol);
+    if (!t) return Promise.resolve([]);
+    days = days || 80;
+    return localApiAvailable().then(function (available) {
+      if (available && !options.skipApi) {
+        return fetchJSON(apiBase() + '/api/kline?secid=' + encodeURIComponent(t.secid) +
+          '&days=' + days, { timeout: 6000, retries: 0 })
+          .then(function (d) { return (d && d.klines) || []; })
+          .catch(function () { return getKlineJsonp(t, days); });
+      }
+      return getKlineJsonp(t, days);
+    });
+  }
+
+  function getKlineJsonp(target, days) {
+    var cb = 'ast_kline_' + (++jsonpSeq) + '_' + Date.now();
+    var url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?cb=' + cb +
+      '&secid=' + encodeURIComponent(target.secid) +
+      '&klt=101&fqt=1&end=20500101&lmt=' + days +
+      '&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57';
+    return loadScript(url, 'utf-8', cb, 9000).then(function (payload) {
+      return ((payload && payload.data && payload.data.klines) || []);
+    }).catch(function () { return []; });
+  }
+
+  global.AST = {
+    pages: PAGES,
+    normalizeSymbol: normalizeSymbol,
+    fetchQuotes: fetchQuotes,
+    searchSymbols: searchSymbols,
+    getKline: getKline,
+    NetworkError: NetworkError,
+    showToast: showToast,
+    wrapTables: wrapTables,
+    storage: { get: get, set: set },
+    fetchJSON: fetchJSON,
+    reportFailure: reportFailure,
+    calcTechScore: calcTechScore,
+    formatPct: formatPct,
+    memo: memo,
+    clearMemo: clearMemo,
+    batchRun: batchRun,
+    compareVersions: compareVersions,
+    checkUpdate: checkUpdate,
+    showUpdateBanner: showUpdateBanner,
+    showUpdateDialog: showUpdateDialog,
+    maybeCheckUpdate: maybeCheckUpdate,
+    checkUpdateNow: checkUpdateNow,
+    registerServiceWorker: registerServiceWorker,
+    initUpdateChecks: initUpdateChecks,
+    syncVersionLabels: syncVersionLabels,
+    currentVersion: currentVersion
+  };
+
+  global.showToast = showToast;
+  global.wrapTables = wrapTables;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initUpdateChecks);
+  } else {
+    initUpdateChecks();
+  }
+})(window);
+
+</script>
+<!-- AST_COMMON_END -->
+</body>
+</html>
