@@ -1,5 +1,5 @@
 // A股智能选股系统 Service Worker（版本号由构建脚本同步）
-const CACHE_VERSION = 'v475';
+const CACHE_VERSION = 'v476';
 const CACHE_NAME = 'astock-pwa-' + CACHE_VERSION;
 const STATIC_CACHE = 'astock-static-' + CACHE_VERSION;
 const RUNTIME_CACHE = 'astock-runtime-' + CACHE_VERSION;
@@ -107,6 +107,22 @@ self.addEventListener('fetch', (event) => {
           if (cached && !isCacheExpired(cached)) return cached;
           return offlineFallback(url);
         })
+    );
+    return;
+  }
+
+  // 每日数据快照：网络优先，离线回退缓存（避免跨日读到旧 K 线）
+  if (url.pathname.indexOf('/data/') >= 0) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }

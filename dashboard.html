@@ -2504,11 +2504,12 @@ async function loadKlineSnapshot() {
     if (n > 0) {
       klineSnapshotCount = n;
       klineSnapshotDate = j.date || null;
-      window.__klineDebug = { snapCount: n, snapDate: klineSnapshotDate, at: Date.now() };
+      document.documentElement.setAttribute('data-kline-snap', n + ':' + (j.date || ''));
       updateKlineTag();
     }
     return n;
   } catch (e) {
+    document.documentElement.setAttribute('data-kline-err', String((e && e.message) || e).slice(0, 120));
     return 0;
   }
 }
