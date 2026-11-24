@@ -1,5 +1,5 @@
 // A股智能选股系统 Service Worker（版本号由构建脚本同步）
-const CACHE_VERSION = 'v474';
+const CACHE_VERSION = 'v475';
 const CACHE_NAME = 'astock-pwa-' + CACHE_VERSION;
 const STATIC_CACHE = 'astock-static-' + CACHE_VERSION;
 const RUNTIME_CACHE = 'astock-runtime-' + CACHE_VERSION;

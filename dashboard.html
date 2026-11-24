@@ -1574,7 +1574,7 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
       <strong>异动归因面板：</strong>自动检测涨跌>3%、量比>2或<0.5、振幅>5%的个股，提供板块联动、近5日趋势、量价分析、K线形态等归因。<br>
       <strong>A股标的：</strong>全市场40只龙头股，覆盖半导体、AI算力、通信、新能源、汽车、医药、食品饮料、金融、地产、军工、有色、煤炭、家电、电力、电子制造15个板块，支持板块筛选。<br>
       <strong>美股标的：</strong>纳斯达克100指数成分股（2026年6月调整后，101只）+ 中概股重点标的（20只），数据来源[$TRAE_REF](https://topforeignstocks.com/indices/the-complete-list-of-constituents-of-the-nasdaq-100-index/)。<br>
-      <strong>K线数据说明：</strong>A股使用新浪财经日K线（80天）；中概股中有港股上市的11只（阿里、百度、网易、B站、理想、蔚来、小鹏、贝壳、新东方、中通、华住）使用港股K线作为代理计算策略条件；纯美股中概股（拼多多、腾讯音乐等9只）及纳斯达克100成分股暂无可免费获取的历史K线数据源，满足条件列显示"--"。<br>
+      <strong>K线数据说明：</strong>A股日K优先读构建期快照（data/klines.json，80根），快照非当日时增量拉取同花顺；中概股中有港股上市的11只（阿里、百度、网易、B站、理想、蔚来、小鹏、贝壳、新东方、中通、华住）使用港股K线作为代理计算策略条件；纯美股中概股（拼多多、腾讯音乐等9只）及纳斯达克100成分股暂无可免费获取的历史K线数据源，满足条件列显示"--"。<br>
       实时行情基于东方财富接口，K线历史数据基于新浪/腾讯财经接口计算，仅供参考，建议结合通达信公式最终确认。
     </div>
     <div class="risk">风险提示：以上内容仅供信息参考，不构成任何投资建议。股市有风险，投资需谨慎。</div>
@@ -2192,6 +2192,8 @@ const COND_NAMES = ['多头排列', '均线粘合', '近5日涨停', '阴线回�
 const ANOMALY_THRESHOLD = { bigMove: 3, volSurge: 2.0, volShrink: 0.5, highAmp: 5 };
 
 let klineCache = {};
+let klineSnapshotDate = null;
+let klineSnapshotCount = 0;
 let lastRealtime = null;
 let lastDataHash = null;
 
@@ -2467,30 +2469,86 @@ async function fetchKlineHK(hkCode, usSecid) {
   }
 }
 
+function klineSnapKey() {
+  return String(klineSnapshotDate || '').replace(/-/g, '');
+}
+
+function fmtKlineDate(s) {
+  const d = String(s || '').replace(/-/g, '');
+  return d.length === 8 ? d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8) : String(s || '');
+}
+
+function updateKlineTag() {
+  const el = document.getElementById('updateTime');
+  if (!el || !klineSnapshotDate) return;
+  const base = String(el.textContent).split(' · K线截至')[0];
+  el.textContent = base + ' · K线截至 ' + fmtKlineDate(klineSnapshotDate);
+}
+
+async function loadKlineSnapshot() {
+  // L0 构建期快照：同源 1 个请求，替代 85 次跨域
+  try {
+    const resp = await fetch('data/klines.json', { cache: 'no-cache' });
+    if (!resp.ok) return 0;
+    const j = await resp.json();
+    const items = j.items || {};
+    let n = 0;
+    Object.keys(items).forEach(function (secid) {
+      const rows = items[secid];
+      if (!rows || !rows.length) return;
+      klineCache[secid] = rows.map(function (r) {
+        return { date: String(r[0]), open: +r[1], high: +r[2], low: +r[3], close: +r[4], volume: +r[5] };
+      });
+      n++;
+    });
+    if (n > 0) {
+      klineSnapshotCount = n;
+      klineSnapshotDate = j.date || null;
+      window.__klineDebug = { snapCount: n, snapDate: klineSnapshotDate, at: Date.now() };
+      updateKlineTag();
+    }
+    return n;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function klineDateToday() {
+  const d = new Date();
+  return '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+}
+
 async function fetchAllKlines() {
-  // 分批加载K线数据，每批5个，避免被API限流
-  const BATCH_SIZE = 5;
   const allSecids = [
     ...watchlist.map(s => ({secid: s.secid, type: 'a'})),
     ...cnStocks.filter(s => CN_HK_MAPPING[s.code]).map(s => ({secid: s.secid, hkCode: CN_HK_MAPPING[s.code], type: 'hk'})),
     ...indexList.map(i => ({secid: i.secid, type: 'a'}))
   ];
 
+  // L0：先读构建期快照（1 请求），命中即先出一屏评分
+  const snapCount = await loadKlineSnapshot();
+  if (snapCount > 0 && lastRealtime) renderData(lastRealtime);
+
+  // 快照已是当日 → 零外部请求
+  if (klineSnapKey() === klineDateToday()) return;
+
+  // L1：快照非当日才增量，并发 6、不再批间等待
   const loadOne = function (item) {
     if (item.type === 'hk') return fetchKlineHK(item.hkCode, item.secid);
     return fetchKline(item.secid);
   };
-  if (window.AST && AST.batchRun) {
-    await AST.batchRun(allSecids, loadOne, { size: BATCH_SIZE, delay: 200 });
-  } else {
-    for (let i = 0; i < allSecids.length; i += BATCH_SIZE) {
-      const batch = allSecids.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(item => Promise.resolve().then(() => loadOne(item)).catch(() => null)));
-      if (i + BATCH_SIZE < allSecids.length) {
-        await new Promise(r => setTimeout(r, 200));
-      }
+  let cursor = 0;
+  const worker = async function () {
+    while (cursor < allSecids.length) {
+      const item = allSecids[cursor++];
+      try { await loadOne(item); } catch (e) { /* 单只失败不阻塞整轮 */ }
     }
-  }
+  };
+  await Promise.all([worker(), worker(), worker(), worker(), worker(), worker()]);
+  // 已拉到当日数据：标记后本日内不再重复 85 次请求
+  klineSnapshotDate = klineDateToday();
+  klineSnapshotCount = Object.keys(klineCache).length;
+  updateKlineTag();
   if (lastRealtime) renderData(lastRealtime);
 }
 
@@ -3219,6 +3277,7 @@ async function fetchData() {
     }
     const now = new Date();
     document.getElementById('updateTime').textContent = '最后更新: ' + now.toTimeString().slice(0, 8);
+    updateKlineTag();
   } catch (e) {
     if (!lastRealtime) {
       document.getElementById('stockBody').innerHTML =
@@ -6458,7 +6517,26 @@ setInterval(fetchCapitalFlow, 60000);
 /* MOBILE APP UI v3.2 —— 表格横向滚动容器（支持动态渲染，幂等） */
 (function () {
   var busy = false;
-    if (document.readyState === 'loading') {
+  function wrapTables() {
+    if (busy || window.innerWidth > 768) return;
+    busy = true;
+    try {
+      var tables = document.querySelectorAll('table');
+      for (var i = 0; i < tables.length; i++) {
+        var t = tables[i];
+        if (!t.parentNode || t.parentNode.classList.contains('m-table-scroll')) continue;
+        var w = document.createElement('div');
+        w.className = 'm-table-scroll';
+        w.style.cssText = 'overflow-x:auto;-webkit-overflow-scrolling:touch';
+        t.parentNode.insertBefore(w, t);
+        w.appendChild(t);
+      }
+    } finally {
+      busy = false;
+    }
+  }
+
+  if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', wrapTables);
   } else {
     wrapTables();
