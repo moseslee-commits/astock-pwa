@@ -350,7 +350,7 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
             <div class="menu-icon" style="background:rgba(99,102,241,0.15)">🏷️</div>
             <div class="menu-info">
                 <div class="menu-name">版本信息</div>
-                <div class="menu-desc">当前 v4.7.3 · 查看更新记录</div>
+                <div class="menu-desc">当前 v4.7.6 · 查看更新记录</div>
             </div>
             <div class="menu-arrow">›</div>
         </div>
@@ -358,7 +358,7 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
             <div class="menu-icon" style="background:rgba(99,102,241,0.15)">ℹ️</div>
             <div class="menu-info">
                 <div class="menu-name">关于</div>
-                <div class="menu-desc">版本 v4.7.3 · 五维共振选股</div>
+                <div class="menu-desc">版本 v4.7.6 · 五维共振选股</div>
             </div>
             <div class="menu-arrow">›</div>
         </div>
@@ -379,18 +379,18 @@ body { padding-bottom: calc(72px + var(--safe-bottom)); }
     <div class="sheet">
         <div class="sheet-handle"></div>
         <h3>版本信息</h3>
-        <div class="sheet-body" style="text-align:left">当前版本：v4.7.3
-发布日期：2026-11-23
+        <div class="sheet-body" style="text-align:left">当前版本：v4.7.6
+发布日期：2026-11-24
 
-最近更新（v4.7.3）
-· 修复线上评分缺维：K 线/分时改直连腾讯行情，技术面不再恒为 30 分
-· 首屏网络请求 238 → 113，/api 依赖清零
-· 「满足条件」不再大面积为空（81/199 → 0/81）
-· 隧道状态改「静态站点」，财务弹层改为明确说明
+最近更新（v4.7.6）
+· K 线改为构建期快照（baostock 全量 85/85）+ 盘后增量，首屏不再逐只请求
+· 快照在网络可用时优先拉取，离线自动回退缓存，跨日不会读到旧 K 线
+· 修复行情轮询重叠：请求未结束不重复发起，连续 3 次失败冷却 5 分钟
+· 修复表格横向滚动容器丢失（动态表格未包裹）
 
 在线版本更新
 · 网页版：<a href="https://moseslee-commits.github.io/astock-pwa/dashboard.html" style="color:#818cf8;word-break:break-all">打开在线看板</a>
-· 最新安装包：<a href="https://moseslee-commits.github.io/astock-pwa/astock_v4.7.6.apk" style="color:#818cf8;word-break:break-all">下载 v4.7.3 APK</a>
+· 最新安装包：<a href="https://moseslee-commits.github.io/astock-pwa/astock_v4.7.6.apk" style="color:#818cf8;word-break:break-all">下载 v4.7.6 APK</a>
 
 历史版本见 CHANGELOG.md
 
@@ -407,7 +407,7 @@ moses.lee@outlook.com</div>
     <div class="sheet">
         <div class="sheet-handle"></div>
         <h3>关于系统</h3>
-        <div class="sheet-body">A股智能选股系统 v4.7.3
+        <div class="sheet-body">A股智能选股系统 v4.7.6
 
 五维共振策略 · 75只龙头股
 数据来源：东方财富实时行情
