@@ -2348,7 +2348,7 @@ function jsonpFetch(url) {
     let done = false;
     const timeout = setTimeout(() => {
       if (!done) { done = true; cleanup(); reject(new Error('timeout')); }
-    }, 12000);
+    }, 6000);
     function cleanup() {
       clearTimeout(timeout);
       delete window[cbName];
@@ -3242,7 +3242,15 @@ function checkConditionsUS(stock, rt) {
   return { count, conditions };
 }
 
+let quoteInFlight = false;
+let quoteFailStreak = 0;
+let quoteCooldownUntil = 0;
+
 async function fetchData() {
+  if (quoteInFlight) return;                       // 上一轮未结束，跳过
+  if (Date.now() < quoteCooldownUntil) return;      // 源不可用，冷却中
+  quoteInFlight = true;
+  try {
   const fields = 'f12,f13,f14,f2,f3,f4,f5,f6,f7,f8,f9,f10,f15,f16,f17,f18,f20,f21,f23,f37,f40,f41,f42,f62,f116,f117';
   // 分批获取A股行情（每批30只，避免URL过长）
   const batchSize = 30;
@@ -3269,6 +3277,15 @@ async function fetchData() {
     const usDiff = (usRes && usRes.data && usRes.data.diff) ? usRes.data.diff : [];
     const cnDiff = (cnRes && cnRes.data && cnRes.data.diff) ? cnRes.data.diff : [];
     const allDiff = [...aDiff, ...usDiff, ...cnDiff];
+    if (allDiff.length === 0) {
+      quoteFailStreak++;
+      if (quoteFailStreak >= 3) {
+        quoteCooldownUntil = Date.now() + 300000;
+        document.getElementById('updateTime').textContent = '行情源不可用 · 5 分钟后重试';
+      }
+    } else {
+      quoteFailStreak = 0;
+    }
     // 性能优化：数据哈希校验，没变时跳过全量渲染
     const dataHash = allDiff.map(d => d.f12 + ':' + d.f2 + ':' + d.f3).join('|');
     if (dataHash !== lastDataHash) {
@@ -3288,6 +3305,9 @@ async function fetchData() {
       document.getElementById('cnStockBody').innerHTML =
         '<tr><td colspan="11" class="error-msg">中概股数据获取失败，将在下次刷新时重试... (' + e.message + ')</td></tr>';
     }
+  }
+  } finally {
+    quoteInFlight = false;
   }
 }
 
